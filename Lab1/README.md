@@ -69,6 +69,11 @@ Repeat with `--threads 2` and `--threads 4`. Replace `E:\` with the actual
 drive letter. The program assigns whole files to workers, balancing by file
 size, reads each file into one byte buffer, and parses that buffer.
 
+Task 2 also writes `task2-baseline-1thread.txt` next to the CSV with the one-thread
+elapsed time, so a later single-configuration run (after a replug) can still report
+a speed-up. Delete that file whenever you change the data set or the drive; it is
+only valid for the measurements taken on the drive and data set that produced it.
+
 The CSV's `correct` field is true only when the three sign counts sum to the
 number of lines processed and the processed-line count equals
 `--expected-count` (50,000,000 by default). Unsynchronized Task 1b results can

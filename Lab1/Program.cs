@@ -137,7 +137,7 @@ internal static class Program
     {
         ValidateOptions(options, "input", "threads", "expected-count", "csv");
         var input = GetOption(options, "input", "numbers.txt");
-        EnsureInputExists(input);
+        EnsureInputFile(input);
         var fileLength = new FileInfo(input).Length;
         var expected = GetLongOption(options, "expected-count", DefaultNumberCount);
         var results = new List<(int Workers, double ElapsedMilliseconds, long PeakBytes, Counts Counts)>();
@@ -381,6 +381,7 @@ internal static class Program
         }
 
         var files = Directory.GetFiles(inputDirectory, "numbers-*.txt")
+            .Where(path => !path.EndsWith("-summary.txt", StringComparison.Ordinal))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
         var expectedFiles = GetIntOption(options, "files", 8);
@@ -410,11 +411,50 @@ internal static class Program
             stopwatch.Stop();
             results.Add((workerCount, stopwatch.Elapsed.TotalMilliseconds, measurement.StopAndGetPeakBytes(), counts));
         }
-        var oneWorkerTime = results.FirstOrDefault(result => result.Workers == 1).ElapsedMilliseconds;
+        // Speed-up is only meaningful against a one-thread run of the same data set. When --threads
+        // does not include 1 (the lab asks for one configuration per replug), use the stored baseline.
+        double? oneWorkerTime = results.FirstOrDefault(result => result.Workers == 1).ElapsedMilliseconds;
+        if (oneWorkerTime is null or 0)
+        {
+            oneWorkerTime = ReadTask2Baseline(options);
+        }
+        else
+        {
+            WriteTask2Baseline(options, oneWorkerTime.Value);
+        }
         foreach (var result in results)
         {
             Report("task2", "whole-file-buffer", result.Workers, result.ElapsedMilliseconds, result.PeakBytes,
-                result.Counts, expected, options, oneWorkerTime > 0 ? oneWorkerTime / result.ElapsedMilliseconds : null);
+                result.Counts, expected, options, oneWorkerTime > 0 ? oneWorkerTime.Value / result.ElapsedMilliseconds : null);
+        }
+    }
+
+    private static string Task2BaselinePath(Dictionary<string, string?> options) =>
+        Path.Combine(Path.GetDirectoryName(Path.GetFullPath(GetOption(options, "csv", "results.csv"))) ?? ".",
+            "task2-baseline-1thread.txt");
+
+    private static double? ReadTask2Baseline(Dictionary<string, string?> options)
+    {
+        var path = Task2BaselinePath(options);
+        if (File.Exists(path) &&
+            double.TryParse(File.ReadAllText(path).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+        {
+            return value;
+        }
+        return null;
+    }
+
+    private static void WriteTask2Baseline(Dictionary<string, string?> options, double milliseconds)
+    {
+        try
+        {
+            var path = Task2BaselinePath(options);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, milliseconds.ToString("F3", CultureInfo.InvariantCulture));
+        }
+        catch (IOException)
+        {
+            // The baseline is only used to compute speed-up; losing it must not fail the measurement.
         }
     }
 
@@ -762,6 +802,15 @@ internal static class Program
         if (!File.Exists(path))
         {
             throw new FileNotFoundException("Input file was not found.", path);
+        }
+    }
+
+    private static void EnsureInputFile(string path)
+    {
+        EnsureInputExists(path);
+        if (Directory.Exists(path))
+        {
+            throw new ArgumentException($"'{path}' is a directory; pass an input file to --input.");
         }
     }
 
