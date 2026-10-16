@@ -44,6 +44,19 @@ dotnet run -c Release --no-build -- task1b --csv results.csv
 dotnet run -c Release --no-build -- task1c --csv results.csv
 ```
 
+Task 1b automatically gets the logical processor count from
+`Environment.ProcessorCount` when `--threads` is omitted. This is supported on
+Windows and Linux. If you want to set the count manually from a text file, put
+one positive integer (for example, `16`) in `threads.txt` and run:
+
+```powershell
+dotnet run -c Release --no-build -- task1b --threads-file threads.txt --csv results.csv
+```
+
+The file is only needed when explicitly using `--threads-file`, or as a
+fallback if the runtime ever reports an invalid processor count. An explicit
+`--threads` value takes precedence over the file.
+
 For Task 2, eject and unplug the drive, plug it back in before each
 configuration, and pass the directory containing the eight files. Run one
 configuration per replug, as required by the lab:
@@ -83,6 +96,14 @@ Get-CimInstance Win32_ComputerSystem |
 Get-PhysicalDisk | Select-Object FriendlyName, MediaType, BusType, Size
 Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsBuildNumber
 ```
+
+On Linux, build and run the same .NET 8 project with `dotnet build -c Release`
+and `dotnet run -c Release -- task1a --csv results.csv`. `Environment.ProcessorCount`,
+file I/O, threads, and the memory sampler are cross-platform. Use Linux tools
+such as `lscpu`, `free -h`, `lsblk -o NAME,MODEL,ROTA,TRAN,SIZE`, and
+`uname -a` to record hardware and OS details. Use the mounted USB path (for
+example, `/media/$USER/LABEL`) for Task 2; unplug/replug the drive between
+configurations as required.
 
 Also record the USB flash-drive model and USB version (for example, from the
 drive manufacturer's specification or USB Device Tree Viewer), the drive's

@@ -188,11 +188,15 @@ internal static class Program
 
     private static void RunTask1B(Dictionary<string, string?> options)
     {
-        ValidateOptions(options, "input", "threads", "expected-count", "csv");
+        ValidateOptions(options, "input", "threads", "threads-file", "expected-count", "csv");
         var input = GetOption(options, "input", "numbers.txt");
         EnsureInputExists(input);
         var expected = GetLongOption(options, "expected-count", DefaultNumberCount);
-        var threadCount = GetIntOption(options, "threads", Environment.ProcessorCount);
+        var threadCount = options.ContainsKey("threads")
+            ? GetIntOption(options, "threads", Environment.ProcessorCount)
+            : options.TryGetValue("threads-file", out var threadsFile)
+                ? ReadThreadCount(threadsFile!)
+                : GetLogicalProcessorCount();
         if (threadCount < 1)
         {
             throw new ArgumentOutOfRangeException("threads", "Thread count must be positive.");
@@ -726,6 +730,33 @@ internal static class Program
             ? parsed
             : options.ContainsKey(name) ? throw new ArgumentException($"Invalid integer for --{name}.") : defaultValue;
 
+    private static int GetLogicalProcessorCount()
+    {
+        var count = Environment.ProcessorCount;
+        if (count > 0)
+        {
+            return count;
+        }
+
+        const string fallbackPath = "threads.txt";
+        if (!File.Exists(fallbackPath))
+        {
+            throw new InvalidOperationException(
+                $"The runtime did not report a valid logical processor count. Create {fallbackPath} with one positive integer.");
+        }
+        return ReadThreadCount(fallbackPath);
+    }
+
+    private static int ReadThreadCount(string path)
+    {
+        var contents = File.ReadAllText(path).Trim();
+        if (!int.TryParse(contents, NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count < 1)
+        {
+            throw new InvalidDataException($"'{path}' must contain one positive integer.");
+        }
+        return count;
+    }
+
     private static void EnsureInputExists(string path)
     {
         if (!File.Exists(path))
@@ -759,7 +790,7 @@ internal static class Program
               generate [--output numbers.txt] [--count 50000000] [--seed N] [--force]
               split [--input numbers.txt] [--output-dir usb] [--files 8] [--force]
               task1a [--input numbers.txt] [--threads 1,2,4,8,16,32,64] [--expected-count 50000000] [--csv results.csv]
-              task1b [--input numbers.txt] [--threads LOGICAL_PROCESSOR_COUNT] [--expected-count 50000000] [--csv results.csv]
+              task1b [--input numbers.txt] [--threads LOGICAL_PROCESSOR_COUNT | --threads-file threads.txt] [--expected-count 50000000] [--csv results.csv]
               task1c [--input numbers.txt] [--threads 1,2,4,8,16,32,64] [--expected-count 50000000] [--csv results.csv]
               task2 [--input-dir usb] [--files 8] [--threads 1,2,4] [--expected-count 50000000] [--csv results.csv]
               hardware
