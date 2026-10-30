@@ -1,6 +1,31 @@
-usb/
+# Build / generated artifacts that should never be committed
 bin/
 obj/
-numbers.txt
-results.csv
-/Lab1/usb/
+Lab1/bin/
+Lab1/obj/
+Lab1/usb/
+Lab1/charts/
+Lab1/numbers.txt
+Lab1/results.csv
+Lab1/task2-local-storage-exploratory.csv
+Lab1/task2-baseline-1thread.txt
+Lab1/hardware.txt
+Lab1/~$*.docx
+
+# Report outputs (generated; source .tex kept in docs/)
+Lab1/REPORT.md
+Lab1/REPORT_LAB1_*.docx
+Lab1/REPORT.tex
+
+docs/*.pdf
+
+# Temp / lock / editor files
+*~
+*.tmp
+*.swp
+*$
+~$*.
+docx
+
+# Ignored data files (input stays untracked)
+usb/

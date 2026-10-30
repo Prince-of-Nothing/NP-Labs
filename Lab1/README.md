@@ -5,6 +5,29 @@ experiments. It generates the input, prepares the eight Task 2 files, runs Tasks
 1a/1b/1c and 2, and emits counts, elapsed time, and sampled peak working-set
 memory. `./usb/` is intentionally ignored by Git; it is a staging folder only.
 
+## Quick start with the helper scripts
+
+From the repository root, `scripts/lab.sh` (Linux/CachyOS) and
+`scripts\lab.ps1` (Windows) wrap every command below with the same verbs.
+`all` does everything that does not need the USB drive:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\lab.ps1 all
+powershell -ExecutionPolicy Bypass -File scripts\lab.ps1 task2 --dir E:\
+```
+
+```bash
+scripts/lab.sh all
+scripts/lab.sh task2 --dir /run/media/$USER/LABEL
+```
+
+`task2` pauses before each thread configuration so you can eject, unplug, and
+replug the drive as the lab requires (`--no-pause` disables the prompts).
+`verify` cross-checks that every correct row in the CSV agrees on the totals,
+`charts` writes `Lab1/charts/task1a.png` … for the report, and `hardware`
+writes `hardware.txt`. The rest of this README documents the raw `dotnet`
+commands the scripts run.
+
 ## Build
 
 Install the .NET 8 SDK, then run these commands from the `Lab1` directory:
