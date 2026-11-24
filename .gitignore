@@ -1,11 +1,38 @@
+# Build artifacts
 bin/
 obj/
 target/
+.vs/
+*.exe
+
+# Lab 2/3/4 runtime data
 broker-data/
 tokens.txt
 *.log
 chat-*.log
-.vs/
 
-*.exe
+# Lab1 generated data (regenerate with: dotnet run -- generate / split)
+Lab1/bin/
+Lab1/obj/
+Lab1/numbers.txt
+Lab1/usb/
+Lab1/charts/
+Lab1/results.csv
+Lab1/hardware.txt
+Lab1/task2-baseline-1thread.txt
+Lab1/task2-local-storage-exploratory.csv
 
+# Report build artifacts
+Lab1/report/*.synctex.gz
+Lab1/report/*.aux
+Lab1/report/*.log
+Lab1/report/*.out
+Lab1/report/*.toc
+
+# OS / editor temp files
+Thumbs.db
+Desktop.ini
+~$*
+*~
+*.tmp
+*.swp

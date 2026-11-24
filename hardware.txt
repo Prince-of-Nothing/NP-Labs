@@ -1,0 +1,21 @@
+Captured: 2026-10-30T10:42:37.9707756+02:00
+
+--- dotnet hardware ---
+Operating system: Microsoft Windows NT 10.0.19044.0
+Runtime: 8.0.31
+Logical processors available to .NET: 8
+Processor identifier: Intel64 Family 6 Model 186 Stepping 2, GenuineIntel
+Memory available to process: 15.70 GiB
+Use the README PowerShell commands to record CPU model/core count, installed RAM, and disk/USB details.
+
+--- Windows details ---
+CPU: 13th Gen Intel(R) Core(TM) i5-13420H
+Physical cores: 8
+Logical processors: 8
+RAM: 15.7 GiB
+Disk: Msft Virtual Disk | SSD | File Backed Virtual | 8 GiB
+Disk: Kingston DataTraveler 3.0 | Unspecified | USB | 28.9 GiB
+Disk: Samsung SSD 990 PRO 2TB | SSD | NVMe | 1863 GiB
+OS: Microsoft Windows 10 Enterprise LTSC 10.0.19044 build 19044
+
+Record the USB flash-drive model, its USB version and capacity separately (from the drive spec or USB Device Tree Viewer).
