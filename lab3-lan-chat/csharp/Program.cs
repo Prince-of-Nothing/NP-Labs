@@ -350,6 +350,7 @@ class Program
                         {
                             string from = root.GetProperty("from").GetString() ?? "";
                             string txt = root.GetProperty("text").GetString() ?? "";
+                            if (txt.Length > 500) { LogDg("DROP", remote.ToString(), "gen_too_long", n); break; }
                             if (from == userName) break;
                             Log($"[general] {from}: {txt}");
                             break;
@@ -390,6 +391,7 @@ class Program
                         {
                             string from = root.GetProperty("from").GetString() ?? "";
                             string txt = root.GetProperty("text").GetString() ?? "";
+                            if (txt.Length > 500) { LogDg("DROP", remote.ToString(), "priv_too_long", n); break; }
                             Log($"[private] {from}: {txt}");
                             break;
                         }
@@ -407,7 +409,9 @@ class Program
                                 {
                                     aes.Decrypt(nonce, ct, tag, pt);
                                 }
-                                Log($"[private] {from}: {Encoding.UTF8.GetString(pt)}");
+                                string msg = Encoding.UTF8.GetString(pt);
+                                if (msg.Length > 500) { LogDg("DROP", remote.ToString(), "privenc_too_long", n); break; }
+                                Log($"[private] {from}: {msg}");
                             }
                             catch (Exception e)
                             {
