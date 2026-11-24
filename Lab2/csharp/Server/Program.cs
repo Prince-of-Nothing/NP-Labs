@@ -413,16 +413,19 @@ namespace CoffeeShop.Server
 
         static void SendRaw(ClientSession s, string text)
         {
-            if (s.Closed) return;
-            byte[] data = Encoding.UTF8.GetBytes(text);
-            int sent = 0;
-            while (sent < data.Length)
+            lock (s.WriteLock)
             {
-                int n;
-                try { n = s.Socket.Send(data, sent, data.Length - sent, SocketFlags.None); }
-                catch { s.Closed = true; return; }
-                if (n <= 0) { s.Closed = true; return; }
-                sent += n;
+                if (s.Closed) return;
+                byte[] data = Encoding.UTF8.GetBytes(text);
+                int sent = 0;
+                while (sent < data.Length)
+                {
+                    int n;
+                    try { n = s.Socket.Send(data, sent, data.Length - sent, SocketFlags.None); }
+                    catch { s.Closed = true; return; }
+                    if (n <= 0) { s.Closed = true; return; }
+                    sent += n;
+                }
             }
         }
     }
@@ -432,9 +435,10 @@ namespace CoffeeShop.Server
         public Socket Socket;
         public string Endpoint = "";
         public bool IsProvider;
-        public bool Closed;
+        public volatile bool Closed;
         public List<Order> Orders = new();
         public object Lock = new();
+        public object WriteLock = new();
     }
 
     class Order

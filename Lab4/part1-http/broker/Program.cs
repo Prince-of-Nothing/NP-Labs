@@ -37,7 +37,8 @@ class Program
     {
         public HttpListenerResponse Response;
         public Stream Stream;
-        public bool Alive = true;
+        public volatile bool Alive = true;
+        public object WriteLock = new();
     }
     class DeliveryItem { public Message Msg; }
 
@@ -262,9 +263,12 @@ class Program
                 try
                 {
                     // heartbeat (empty line) to detect client disconnect
-                    byte[] hb = Encoding.UTF8.GetBytes("\n");
-                    sub.Stream.Write(hb, 0, hb.Length);
-                    sub.Stream.Flush();
+                    lock (sub.WriteLock)
+                    {
+                        byte[] hb = Encoding.UTF8.GetBytes("\n");
+                        sub.Stream.Write(hb, 0, hb.Length);
+                        sub.Stream.Flush();
+                    }
                 }
                 catch
                 {
@@ -301,8 +305,11 @@ class Program
                 if (!sub.Alive) continue;
                 try
                 {
-                    sub.Stream.Write(data, 0, data.Length);
-                    sub.Stream.Flush();
+                    lock (sub.WriteLock)
+                    {
+                        sub.Stream.Write(data, 0, data.Length);
+                        sub.Stream.Flush();
+                    }
                     Log($"Delivered id={msg.Id} topic={msg.Topic} to subscriber");
                 }
                 catch

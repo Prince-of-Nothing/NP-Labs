@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -30,8 +31,9 @@ type Session struct {
 	conn       net.Conn
 	endpoint   string
 	isProvider bool
-	closed     bool
+	closed     atomic.Bool
 	mu         sync.Mutex
+	writeMu    sync.Mutex
 	orders     []*Order
 }
 
@@ -62,15 +64,17 @@ func (s *State) stockStr() string {
 }
 
 func sendJSON(sess *Session, v interface{}) {
-	if sess.closed {
-		return
-	}
 	b, _ := json.Marshal(v)
 	b = append(b, '\n')
+	sess.writeMu.Lock()
+	defer sess.writeMu.Unlock()
+	if sess.closed.Load() {
+		return
+	}
 	sess.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	_, err := sess.conn.Write(b)
 	if err != nil {
-		sess.closed = true
+		sess.closed.Store(true)
 	}
 }
 
@@ -90,7 +94,7 @@ func (st *State) checkAlerts() {
 	provs := append([]*Session(nil), st.providers...)
 	st.provMu.Unlock()
 	for _, p := range provs {
-		if p.closed {
+		if p.closed.Load() {
 			continue
 		}
 		for _, prod := range low {
@@ -107,11 +111,11 @@ func (st *State) checkAlerts() {
 
 func handleDisconnect(st *State, sess *Session) {
 	sess.mu.Lock()
-	if sess.closed {
+	if sess.closed.Load() {
 		sess.mu.Unlock()
 		return
 	}
-	sess.closed = true
+	sess.closed.Store(true)
 	orders := append([]*Order(nil), sess.orders...)
 	sess.orders = nil
 	sess.mu.Unlock()
