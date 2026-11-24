@@ -1,7 +1,7 @@
 services:
   coffee-server:
     build:
-      context: ./lab2-coffee-shop/csharp
+      context: ./Lab2/csharp
       dockerfile: Dockerfile.server
     ports:
       - "5001:5000"
@@ -9,7 +9,7 @@ services:
 
   coffee-client:
     build:
-      context: ./lab2-coffee-shop/csharp
+      context: ./Lab2/csharp
       dockerfile: Dockerfile.client
     depends_on:
       - coffee-server
@@ -19,7 +19,7 @@ services:
 
   coffee-provider:
     build:
-      context: ./lab2-coffee-shop/csharp
+      context: ./Lab2/csharp
       dockerfile: Dockerfile.client
     depends_on:
       - coffee-server
@@ -29,7 +29,7 @@ services:
 
   chat-alice:
     build:
-      context: ./lab3-lan-chat/csharp
+      context: ./Lab3/csharp
       dockerfile: Dockerfile
     network_mode: host
     stdin_open: true
@@ -38,7 +38,7 @@ services:
 
   chat-bob:
     build:
-      context: ./lab3-lan-chat/csharp
+      context: ./Lab3/csharp
       dockerfile: Dockerfile
     network_mode: host
     stdin_open: true
@@ -47,7 +47,7 @@ services:
 
   broker-http:
     build:
-      context: ./lab4-message-broker/part1-http/broker
+      context: ./Lab4/part1-http/broker
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -55,7 +55,7 @@ services:
 
   publisher-http:
     build:
-      context: ./lab4-message-broker/part1-http/publisher
+      context: ./Lab4/part1-http/publisher
       dockerfile: Dockerfile
     depends_on:
       - broker-http
@@ -65,7 +65,7 @@ services:
 
   subscriber-http:
     build:
-      context: ./lab4-message-broker/part1-http/subscriber
+      context: ./Lab4/part1-http/subscriber
       dockerfile: Dockerfile
     depends_on:
       - broker-http
@@ -73,14 +73,14 @@ services:
 
   broker-grpc:
     build:
-      context: ./lab4-message-broker/part2-grpc
+      context: ./Lab4/part2-grpc
       dockerfile: broker/Dockerfile
     ports:
       - "5000:5000"
 
   publisher-grpc:
     build:
-      context: ./lab4-message-broker/part2-grpc
+      context: ./Lab4/part2-grpc
       dockerfile: publisher/Dockerfile
     depends_on:
       - broker-grpc
@@ -90,7 +90,7 @@ services:
 
   subscriber-grpc:
     build:
-      context: ./lab4-message-broker/part2-grpc
+      context: ./Lab4/part2-grpc
       dockerfile: subscriber/Dockerfile
     depends_on:
       - broker-grpc

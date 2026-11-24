@@ -9,18 +9,21 @@ The `Lab1/usb/` folder is a local staging area for the eight files used in Task
 2 and is intentionally ignored by Git.
 
 ## Lab 2 — Coffee Shop Server (TCP)
-- `lab2-coffee-shop/csharp`: Server + Client (client or provider role).
-- `lab2-coffee-shop/rust`: server + client.
-- `lab2-coffee-shop/go`: server + client.
+See [Lab2/README.md](./Lab2/README.md).
+- `Lab2/csharp`: Server + Client (client or provider role).
+- `Lab2/rust`: server + client.
+- `Lab2/go`: server + client.
 - Run: `dotnet run --project Server/Server.csproj -- <port>` then `dotnet run --project Client/Client.csproj -- <host> <port> [client|provider]`.
 
 ## Lab 3 — LAN Chat (UDP)
-- `lab3-lan-chat/csharp`: Chat peer. Run two+ instances: `dotnet run -- <name> <port> [passphrase]`.
+See [Lab3/README.md](./Lab3/README.md).
+- `Lab3/csharp`: Chat peer. Run two+ instances: `dotnet run -- <name> <port> [passphrase]`.
 - Uses broadcast for general channel, unique port for private messages, AES-GCM for secure private messages.
 
 ## Lab 4 — Message Broker (HTTP + gRPC)
-- Part 1 HTTP: `lab4-message-broker/part1-http/{broker,publisher,subscriber}`.
-- Part 2 gRPC: `lab4-message-broker/part2-grpc/{broker,publisher,subscriber}`.
+See [Lab4/README.md](./Lab4/README.md).
+- Part 1 HTTP: `Lab4/part1-http/{broker,publisher,subscriber}`.
+- Part 2 gRPC: `Lab4/part2-grpc/{broker,publisher,subscriber}`.
 - Broker: `dotnet run -- http://localhost:8080/` (HTTP) or `dotnet run` (gRPC, port 5000).
 - Publisher: `dotnet run -- <brokerUrl> <topic> <sender> [token]`.
 - Subscriber: `dotnet run -- <brokerUrl> <topic>`.
