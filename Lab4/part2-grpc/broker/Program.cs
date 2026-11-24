@@ -9,5 +9,4 @@ builder.Services.AddGrpc();
 builder.WebHost.ConfigureKestrel(o => o.ListenAnyIP(5000, lo => lo.Protocols = HttpProtocols.Http2));
 var app = builder.Build();
 app.MapGrpcService<BrokerService>();
-app.MapGet("/", () => "gRPC broker");
 app.Run();

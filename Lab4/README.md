@@ -1,5 +1,7 @@
 # Lab 4 — Message Broker (HTTP + gRPC)
 
+Defense notes and design answers: [KNOWLEDGE.md](./KNOWLEDGE.md).
+
 A message broker between publishers and subscribers. Publishers know only the
 broker; subscribers know only the broker. Two parts, same tasks.
 
@@ -37,6 +39,10 @@ API:
   rename. Ids continue after restart.
 - Tokens: `tokens.txt` lines are `<token> <publisher> <topic1,topic2>`.
   Missing/unknown token → 401 + `WWW-Authenticate: Bearer`; wrong topic → 403.
+- Default prefix is `http://localhost:8080/` so it runs without Administrator.
+  To accept LAN connections on Windows, run once as Administrator:
+  `netsh http add urlacl url=http://+:8080/ user=Everyone` and start the broker
+  with `http://+:8080/` (on Linux/Docker `http://+:8080/` works directly).
 
 Go (from `part1-http/go`):
 
@@ -55,6 +61,7 @@ dotnet run --project part2-grpc/publisher -- http://localhost:5000 grades teache
 ```
 
 - `Publish` unary, `Subscribe` server-streaming, `ListTopics` unary.
+- No HTTP API in this part (only gRPC).
 - Same persistence and token rules; token travels in `authorization` metadata.
 - Missing/unknown token → `Unauthenticated`; topic not allowed → `PermissionDenied`.
 

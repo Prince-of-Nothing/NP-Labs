@@ -46,7 +46,7 @@ class Program
 
     static void Main(string[] args)
     {
-        string prefix = args.Length >= 1 ? args[0] : "http://+:8080/";
+        string prefix = args.Length >= 1 ? args[0] : "http://localhost:8080/";
         if (!prefix.EndsWith("/")) prefix += "/";
         Directory.CreateDirectory(dataDir);
         LoadTopics();

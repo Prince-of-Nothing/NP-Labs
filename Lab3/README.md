@@ -1,5 +1,7 @@
 # Lab 3 — LAN Chat (UDP)
 
+Defense notes and control-question answers: [KNOWLEDGE.md](./KNOWLEDGE.md).
+
 Serverless peer-to-peer chat over raw UDP sockets. One program, every running
 copy is a peer. No server, no chat/messaging library, no service discovery
 library.
