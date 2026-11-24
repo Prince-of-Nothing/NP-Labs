@@ -33,11 +33,12 @@ cd go/client; go run . 127.0.0.1 5000 client
 ## Protocol (newline-delimited JSON)
 
 Client/provider → server: `{"cmd":"hello","role":"client|provider"}`, `menu`,
-`order` / `deliver` with `items:[{"product":"coffee","qty":2}]`, `quit`.
+`order` / `deliver` with `items:[{"product":"coffee","qty":2}]` (orders also
+carry a `tag` used to correlate metrics), `stats`, `quit`.
 
-Server → client: `menu` (stock), `order_accepted` (id, prep ms),
-`order_refused` (product, available), `order_ready`, `alert`, `delivery_ok`,
-`error`.
+Server → client: `menu` (stock), `order_accepted` (id, prep ms, tag),
+`order_refused` (product, available, tag), `order_ready` (id, tag), `alert`,
+`delivery_ok`, `stats` (summary), `error`.
 
 ## Behaviour
 
@@ -48,6 +49,35 @@ Server → client: `menu` (stock), `order_accepted` (id, prep ms),
 - Low stock (<5) alerts the provider immediately, and on provider reconnect.
 - Client disconnect cancels queued and in-progress orders; products return to stock.
 - Invalid input produces an error and never crashes the server.
+
+## Metrics for the report (automatic)
+
+Run the C# server and client with the working directory `Lab2/csharp` so both
+write into the same `metrics/` folder. Nothing has to be collected by hand.
+
+- Server writes, after every finished order:
+  - `metrics/server-orders.csv` — order id, endpoint, tag, items, expected prep,
+    accepted/started/ready timestamps, queue wait, actual prep, worker id, status.
+  - `metrics/server-summary.json` — refreshed every 2 s: connections, accepted/
+    refused/ready/cancelled, deliveries, alerts, avg/max queue wait, avg/max
+    prep, throughput, per-worker orders and utilisation.
+- Client writes:
+  - `metrics/client-orders.csv` — tag, order id, items, accept latency, ready
+    wait, total time, status.
+  - `metrics/client-summary.json` — sent/accepted/refused/ready, avg/max
+    latencies, pending.
+- Type `stats` in the client to print the live server summary and the client
+  summary.
+- Generate the report table and SVG charts (standard library only):
+
+```powershell
+python Lab2/scripts/metrics_report.py
+# or: python Lab2/scripts/metrics_report.py --dir <metrics folder>
+```
+
+This writes `metrics/report.md`, `queue_wait.svg`, `prep_time.svg`,
+`worker_orders.svg`, and `client_latency.svg`. The generated files are ignored
+by Git; only the code and the script are committed.
 
 ## Docker
 

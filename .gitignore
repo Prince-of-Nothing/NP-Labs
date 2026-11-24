@@ -10,6 +10,8 @@ broker-data/
 tokens.txt
 *.log
 chat-*.log
+Lab2/**/metrics/
+Lab2/**/charts/
 
 # Lab1 generated data (regenerate with: dotnet run -- generate / split)
 Lab1/bin/

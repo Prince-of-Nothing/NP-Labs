@@ -32,6 +32,7 @@ namespace CoffeeShop.Client
             catch (Exception e) { Console.WriteLine($"connect error: {e.Message}"); return; }
             endpoint = sock.RemoteEndPoint?.ToString() ?? "";
             Console.WriteLine($"Connected to {endpoint} as {role}");
+            Metrics.Init(role);
 
             // identify
             SendJson(new { cmd = "hello", role = role });
@@ -41,7 +42,7 @@ namespace CoffeeShop.Client
             rt.Start();
 
             // main input loop
-            Console.WriteLine("Commands: menu | order <product>:<qty> ... | deliver <product>:<qty> ... (provider) | quit");
+            Console.WriteLine("Commands: menu | order <product>:<qty> ... | deliver <product>:<qty> ... (provider) | stats | quit");
             while (running)
             {
                 string? line;
@@ -60,11 +61,20 @@ namespace CoffeeShop.Client
                     SendJson(new { cmd = "menu" });
                     continue;
                 }
+                if (line == "stats")
+                {
+                    SendJson(new { cmd = "stats" });
+                    Console.WriteLine("Local client metrics:");
+                    Console.WriteLine(Metrics.SummaryText());
+                    continue;
+                }
                 if (line.StartsWith("order "))
                 {
                     var items = ParseItems(line.Substring(6));
                     if (items == null) { Console.WriteLine("bad items"); continue; }
-                    SendJson(new { cmd = "order", items = items });
+                    int tag = Metrics.NextTag();
+                    Metrics.Sent(tag, line.Substring(6).Trim());
+                    SendJson(new { cmd = "order", items = items, tag = tag });
                     continue;
                 }
                 if (line.StartsWith("deliver "))
@@ -78,6 +88,7 @@ namespace CoffeeShop.Client
                 Console.WriteLine("Unknown command");
             }
             running = false;
+            Metrics.Shutdown();
             try { sock.Shutdown(SocketShutdown.Both); } catch { }
             try { sock.Close(); } catch { }
         }
@@ -112,6 +123,7 @@ namespace CoffeeShop.Client
                     {
                         Log("[server gone]");
                         running = false;
+                        Metrics.Shutdown();
                         try { sock.Close(); } catch { }
                         Environment.Exit(0);
                     }
@@ -148,13 +160,33 @@ namespace CoffeeShop.Client
                         }
                         break;
                     case "order_accepted":
-                        Console.WriteLine($"Order {root.GetProperty("id").GetInt32()} accepted, prep {root.GetProperty("prep").GetInt32()} ms");
-                        break;
+                        {
+                            int id = root.GetProperty("id").GetInt32();
+                            int prep = root.GetProperty("prep").GetInt32();
+                            int tag = root.TryGetProperty("tag", out var te) && te.TryGetInt32(out var tv) ? tv : 0;
+                            Metrics.Accepted(tag, id, prep);
+                            Console.WriteLine($"Order {id} accepted, prep {prep} ms");
+                            break;
+                        }
                     case "order_refused":
-                        Console.WriteLine($"Order refused: {root.GetProperty("product").GetString()} only {root.GetProperty("available").GetInt32()} left");
-                        break;
+                        {
+                            int tag = root.TryGetProperty("tag", out var te) && te.TryGetInt32(out var tv) ? tv : 0;
+                            Metrics.Refused(tag);
+                            Console.WriteLine($"Order refused: {root.GetProperty("product").GetString()} only {root.GetProperty("available").GetInt32()} left");
+                            break;
+                        }
                     case "order_ready":
-                        Console.WriteLine($"Order {root.GetProperty("id").GetInt32()} READY");
+                        {
+                            int id = root.GetProperty("id").GetInt32();
+                            int tag = root.TryGetProperty("tag", out var te) && te.TryGetInt32(out var tv) ? tv : 0;
+                            Metrics.Ready(tag, id);
+                            Console.WriteLine($"Order {id} READY");
+                            break;
+                        }
+                    case "stats":
+                        Console.WriteLine("Server metrics:");
+                        if (root.TryGetProperty("summary", out var sm))
+                            Console.WriteLine(sm.GetRawText());
                         break;
                     case "alert":
                         Console.WriteLine($"ALERT: {root.GetProperty("product").GetString()} stock={root.GetProperty("stock").GetInt32()}");

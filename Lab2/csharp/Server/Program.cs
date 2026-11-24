@@ -57,9 +57,11 @@ namespace CoffeeShop.Server
 
             int workers = Environment.ProcessorCount;
             if (workers < 1) workers = 1;
+            Metrics.Init(workers);
             for (int i = 0; i < workers; i++)
             {
-                var t = new Thread(WorkerLoop) { IsBackground = true, Name = $"worker-{i}" };
+                int wid = i;
+                var t = new Thread(() => WorkerLoop(wid)) { IsBackground = true, Name = $"worker-{i}" };
                 t.Start();
             }
             Log($"Started {workers} workers");
@@ -75,6 +77,7 @@ namespace CoffeeShop.Server
                 {
                     var client = listener.Accept();
                     var ep = client.RemoteEndPoint?.ToString() ?? "?";
+                    Metrics.Connection();
                     Log($"Connection from {ep}");
                     var session = new ClientSession { Socket = client, Endpoint = ep };
                     lock (SessionsLock) Sessions.Add(session);
@@ -153,6 +156,7 @@ namespace CoffeeShop.Server
             try { doc = JsonDocument.Parse(line); }
             catch
             {
+                Metrics.Error();
                 SendLine(s, Err("invalid json"));
                 Log($"Invalid input from {s.Endpoint}: {line}");
                 return;
@@ -174,6 +178,7 @@ namespace CoffeeShop.Server
                     if (s.IsProvider)
                     {
                         lock (SessionsLock) Providers.Add(s);
+                        Metrics.Provider();
                         Log($"Provider identified: {s.Endpoint}");
                         // send alerts for low stock
                         SendAlerts(s);
@@ -193,12 +198,16 @@ namespace CoffeeShop.Server
                     case "deliver":
                         HandleDeliver(s, root);
                         break;
+                    case "stats":
+                        SendJson(s, new { type = "stats", summary = Metrics.Summary() });
+                        break;
                     case "quit":
                         SendLine(s, Ok("bye"));
                         s.Closed = true;
                         HandleDisconnect(s);
                         break;
                     default:
+                        Metrics.Error();
                         SendLine(s, Err("unknown command"));
                         Log($"Unknown command from {s.Endpoint}: {cmd}");
                         break;
@@ -229,6 +238,7 @@ namespace CoffeeShop.Server
                 int qty = it.TryGetProperty("qty", out var qe) && qe.TryGetInt32(out var qi) ? qi : 0;
                 if (!Products.Contains(prod) || qty <= 0)
                 {
+                    Metrics.Error();
                     SendLine(s, Err($"invalid product or quantity: {prod}"));
                     Log($"Invalid order from {s.Endpoint}");
                     return;
@@ -236,6 +246,7 @@ namespace CoffeeShop.Server
                 items[prod] = items.TryGetValue(prod, out var v) ? v + qty : qty;
             }
             if (items.Count == 0) { SendLine(s, Err("empty order")); return; }
+            int tag = root.TryGetProperty("tag", out var te) && te.TryGetInt32(out var tv) ? tv : 0;
 
             // check stock and decrement
             lock (StockLock)
@@ -245,7 +256,8 @@ namespace CoffeeShop.Server
                     if (Stock[kv.Key] < kv.Value)
                     {
                         var avail = Stock[kv.Key];
-                        SendLine(s, new { type = "order_refused", product = kv.Key, available = avail });
+                        Metrics.Refused();
+                        SendLine(s, new { type = "order_refused", product = kv.Key, available = avail, tag = tag });
                         Log($"Order refused for {s.Endpoint}: {kv.Key} need {kv.Value} have {avail}");
                         return;
                     }
@@ -259,12 +271,18 @@ namespace CoffeeShop.Server
             foreach (var kv in items) prep += PrepTime[kv.Key] * kv.Value; // per item time * qty? lab: sum times of all items: 2 croissants = 2*2. yes qty multiplier
             // Actually prep time per product fixed per unit? "2 croissants, 1 tea, 1 coffee take 2*2+3+4" yes qty multiplier.
 
-            var order = new Order { Id = id, Client = s, Items = items, PrepTime = prep };
+            string itemsStr = string.Join(",", items.Select(kv => kv.Key + "=" + kv.Value));
+            var order = new Order
+            {
+                Id = id, Client = s, Items = items, PrepTime = prep, Tag = tag,
+                ItemsStr = itemsStr, AcceptedAt = DateTime.UtcNow, WorkerId = -1
+            };
             lock (s.Lock) s.Orders.Add(order);
 
             OrderQueue.Add(order);
 
-            SendLine(s, new { type = "order_accepted", id = id, prep = prep });
+            Metrics.Accepted(order);
+            SendLine(s, new { type = "order_accepted", id = id, prep = prep, tag = tag });
             Log($"Order {id} accepted from {s.Endpoint}, prep {prep}ms");
 
             // alert low stock
@@ -275,6 +293,7 @@ namespace CoffeeShop.Server
         {
             if (!s.IsProvider)
             {
+                Metrics.Error();
                 SendLine(s, Err("only provider can deliver"));
                 Log($"Deliver refused (not provider) from {s.Endpoint}");
                 return;
@@ -294,6 +313,7 @@ namespace CoffeeShop.Server
                 foreach (var kv in items) Stock[kv.Key] += kv.Value;
             }
             SendLine(s, new { type = "delivery_ok", items = items });
+            Metrics.Delivery();
             Log($"Delivery from {s.Endpoint}: {string.Join(",", items.Select(kv => kv.Key + "=" + kv.Value))}");
             // no alerts on increase? still check
             CheckAlerts();
@@ -319,7 +339,7 @@ namespace CoffeeShop.Server
                     SendLine(p, new { type = "alert", product = prod, stock = st });
                 }
             }
-            if (provs.Count > 0) Log($"Alert sent for {string.Join(",", low)}");
+            if (provs.Count > 0) { Metrics.Alert(); Log($"Alert sent for {string.Join(",", low)}"); }
         }
 
         static void SendAlerts(ClientSession s)
@@ -334,12 +354,13 @@ namespace CoffeeShop.Server
             }
         }
 
-        static void WorkerLoop()
+        static void WorkerLoop(int workerId)
         {
             foreach (var order in OrderQueue.GetConsumingEnumerable())
             {
                 try
                 {
+                    Metrics.Started(order, workerId);
                     bool cancelled = false;
                     int remaining = order.PrepTime;
                     int chunk = 100;
@@ -360,6 +381,7 @@ namespace CoffeeShop.Server
                             foreach (var kv in order.Items) Stock[kv.Key] += kv.Value;
                         }
                         lock (order.Client.Lock) order.Client.Orders.Remove(order);
+                        Metrics.Finished(order, "cancelled");
                         Log($"Order {order.Id} cancelled (client gone); products returned");
                         CheckAlerts();
                         continue;
@@ -368,10 +390,11 @@ namespace CoffeeShop.Server
                     // ready
                     try
                     {
-                        SendLine(order.Client, new { type = "order_ready", id = order.Id });
+                        SendLine(order.Client, new { type = "order_ready", id = order.Id, tag = order.Tag });
                         Log($"Order {order.Id} ready for {order.Client.Endpoint}");
                     }
                     catch { }
+                    Metrics.Finished(order, "ready");
                     lock (order.Client.Lock) order.Client.Orders.Remove(order);
                 }
                 catch (Exception e)
@@ -447,6 +470,13 @@ namespace CoffeeShop.Server
         public ClientSession Client;
         public Dictionary<string, int> Items = new();
         public int PrepTime;
+        public int Tag;
+        public string ItemsStr = "";
+        public DateTime AcceptedAt;
+        public DateTime? StartedAt;
+        public DateTime? FinishedAt;
+        public int WorkerId = -1;
+        public string Status = "";
         public CancellationTokenSource Cts = new();
     }
 }
