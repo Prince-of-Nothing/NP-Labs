@@ -1,5 +1,6 @@
 syntax = "proto3";
 package broker;
+option go_package = "nplabs/lab4grpc/pb;broker";
 import "google/protobuf/timestamp.proto";
 
 service Broker {

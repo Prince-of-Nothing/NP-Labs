@@ -18,6 +18,8 @@ class Program
     static string privEndpoint = "";
     static readonly object PeersLock = new();
     static readonly Dictionary<string, Peer> Peers = new();
+    static readonly HashSet<string> SeenGen = new();
+    static readonly object SeenLock = new();
     static readonly object ConsoleLock = new();
     static readonly object LogLock = new();
     static StreamWriter logWriter;
@@ -352,6 +354,16 @@ class Program
                             string txt = root.GetProperty("text").GetString() ?? "";
                             if (txt.Length > 500) { LogDg("DROP", remote.ToString(), "gen_too_long", n); break; }
                             if (from == userName) break;
+                            int mid = root.TryGetProperty("id", out var ide) && ide.TryGetInt32(out var iv) ? iv : 0;
+                            if (mid != 0)
+                            {
+                                string key = from + ":" + mid;
+                                lock (SeenLock)
+                                {
+                                    if (SeenGen.Contains(key)) break;
+                                    SeenGen.Add(key);
+                                }
+                            }
                             Log($"[general] {from}: {txt}");
                             break;
                         }

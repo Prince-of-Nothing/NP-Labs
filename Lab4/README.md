@@ -10,6 +10,8 @@ broker; subscribers know only the broker. Two parts, same tasks.
 - `part2-grpc/broker` — gRPC broker (`Grpc.AspNetCore`).
 - `part2-grpc/publisher`, `part2-grpc/subscriber` — gRPC console clients.
 - `part2-grpc/proto/broker.proto` — shared contract.
+- `part1-http/go`, `part2-grpc/go` — Go implementations (stdlib HTTP,
+  `google.golang.org/grpc`).
 
 ## Part 1 — HTTP
 
@@ -36,6 +38,14 @@ API:
 - Tokens: `tokens.txt` lines are `<token> <publisher> <topic1,topic2>`.
   Missing/unknown token → 401 + `WWW-Authenticate: Bearer`; wrong topic → 403.
 
+Go (from `part1-http/go`):
+
+```powershell
+go run ./broker -addr :8080
+go run ./subscriber http://localhost:8080 grades
+go run ./publisher http://localhost:8080 grades teacher [token]
+```
+
 ## Part 2 — gRPC
 
 ```powershell
@@ -47,6 +57,22 @@ dotnet run --project part2-grpc/publisher -- http://localhost:5000 grades teache
 - `Publish` unary, `Subscribe` server-streaming, `ListTopics` unary.
 - Same persistence and token rules; token travels in `authorization` metadata.
 - Missing/unknown token → `Unauthenticated`; topic not allowed → `PermissionDenied`.
+
+Go (from `part2-grpc/go`, generated stubs in `pb/`):
+
+```powershell
+go run ./broker -addr :5000
+go run ./subscriber localhost:5000 grades
+go run ./publisher localhost:5000 grades teacher [token]
+```
+
+Regenerate the stubs after editing the proto:
+
+```powershell
+protoc --go_out=pb --go_opt=paths=source_relative `
+       --go-grpc_out=pb --go-grpc_opt=paths=source_relative `
+       -I ../proto -I <protoc-include> ../proto/broker.proto
+```
 
 ## Docker
 

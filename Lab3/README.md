@@ -6,12 +6,22 @@ library.
 
 ## Layout
 
-- `csharp/` — the chat peer (`Chat.csproj`).
+- `csharp/` — the C# chat peer (`Chat.csproj`).
+- `go/` — the Go chat peer (stdlib only).
 
 ## Build and run
 
+C#:
+
 ```powershell
 dotnet run --project csharp/Chat.csproj -- <name> <port> [passphrase]
+```
+
+Go:
+
+```powershell
+cd go
+go run . <name> <port> [passphrase]
 ```
 
 Example (three peers on the same machine or LAN):
