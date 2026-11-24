@@ -1,8 +1,6 @@
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use std::thread;
 
 fn main() {
@@ -13,7 +11,10 @@ fn main() {
     let role = if args.len() >= 4 { args[3].as_str() } else { "client" };
     if role != "client" && role != "provider" { println!("role must be client or provider"); return; }
 
-    let stream = TcpStream::connect(format!("{}:{}", host, port)).expect("connect");
+    let stream = match TcpStream::connect(format!("{}:{}", host, port)) {
+        Ok(s) => s,
+        Err(e) => { println!("connect error: {}", e); return; }
+    };
     let write_stream = stream.try_clone().unwrap();
     let read_stream = stream.try_clone().unwrap();
     println!("Connected to {}:{} as {}", host, port, role);
@@ -24,9 +25,6 @@ fn main() {
     writeln!(ws, "{}", hello).unwrap();
     ws.flush().unwrap();
 
-    let running = Arc::new(AtomicBool::new(true));
-    let running_r = running.clone();
-
     // receiver thread
     let rt = thread::spawn(move || {
         let mut reader = BufReader::new(read_stream);
@@ -34,9 +32,9 @@ fn main() {
         loop {
             line.clear();
             match reader.read_line(&mut line) {
-                Ok(0) => { println!("[server gone]"); running_r.store(false, Ordering::SeqCst); break; }
+                Ok(0) => { println!("[server gone]"); std::process::exit(0); }
                 Ok(_) => {}
-                Err(_) => { println!("[server gone]"); running_r.store(false, Ordering::SeqCst); break; }
+                Err(_) => { println!("[server gone]"); std::process::exit(0); }
             }
             let trimmed = line.trim_end_matches('\n').trim_end_matches('\r').trim().to_string();
             if trimmed.is_empty() { continue; }
@@ -47,7 +45,6 @@ fn main() {
     println!("Commands: menu | order <product>:<qty> ... | deliver <product>:<qty> ... (provider) | quit");
     let stdin = std::io::stdin();
     for line in stdin.lock().lines() {
-        if !running.load(Ordering::SeqCst) { break; }
         let line = match line { Ok(l) => l, Err(_) => break };
         let line = line.trim().to_string();
         if line.is_empty() { continue; }
@@ -77,7 +74,6 @@ fn main() {
         }
         println!("Unknown command");
     }
-    running.store(false, Ordering::SeqCst);
     let _ = rt.join();
 }
 

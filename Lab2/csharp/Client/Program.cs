@@ -28,7 +28,8 @@ namespace CoffeeShop.Client
             if (role != "client" && role != "provider") { Console.WriteLine("role must be client or provider"); return; }
 
             sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            sock.Connect(host, port);
+            try { sock.Connect(host, port); }
+            catch (Exception e) { Console.WriteLine($"connect error: {e.Message}"); return; }
             endpoint = sock.RemoteEndPoint?.ToString() ?? "";
             Console.WriteLine($"Connected to {endpoint} as {role}");
 
@@ -107,8 +108,13 @@ namespace CoffeeShop.Client
                 catch { n = 0; }
                 if (n <= 0)
                 {
-                    Log("[server gone]");
-                    running = false;
+                    if (running)
+                    {
+                        Log("[server gone]");
+                        running = false;
+                        try { sock.Close(); } catch { }
+                        Environment.Exit(0);
+                    }
                     return;
                 }
                 leftover += Encoding.UTF8.GetString(buf, 0, n);

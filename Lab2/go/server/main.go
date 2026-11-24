@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -208,7 +209,6 @@ func handleClient(st *State, sess *Session) {
 	reader := bufio.NewReader(sess.conn)
 	identified := false
 	for {
-		sess.conn.SetReadDeadline(time.Now().Add(0)) // no deadline
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			// maybe last line
@@ -414,7 +414,10 @@ func main() {
 		st.stock[p] = rng.Intn(41) + 10
 	}
 	logMsg(fmt.Sprintf("Stock initialized: %s", st.stockStr()))
-	workers := 4 // could use runtime.NumCPU()
+	workers := runtime.NumCPU()
+	if workers < 1 {
+		workers = 1
+	}
 	for i := 0; i < workers; i++ {
 		go workerLoop(st)
 	}

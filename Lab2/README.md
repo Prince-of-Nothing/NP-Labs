@@ -59,5 +59,10 @@ docker compose run --rm coffee-provider
 
 ## Verified
 
-Last-item race: 1 accepted / 1 refused; disconnect mid-order returns stock;
-provider alert on threshold and on reconnect; invalid product rejected.
+- Last-item race: 1 accepted / 1 refused.
+- Disconnect mid-order returns stock; invalid product rejected.
+- Low-stock alert on threshold and on provider reconnect; provider disconnect
+  does not stop the shop.
+- 20 clients against 12 workers: all 20 orders accepted and all 20 became ready
+  (FIFO queue, one worker per CPU core).
+- Server disappearance: C#, Rust and Go clients exit cleanly (code 0).
