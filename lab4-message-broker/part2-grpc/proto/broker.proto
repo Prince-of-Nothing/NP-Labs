@@ -1,0 +1,47 @@
+syntax = "proto3";
+package broker;
+import "google/protobuf/timestamp.proto";
+
+service Broker {
+  rpc Publish (PublishRequest) returns (PublishReply);
+  rpc Subscribe (SubscribeRequest) returns (stream Message);
+  rpc ListTopics (ListTopicsRequest) returns (ListTopicsReply);
+}
+
+message PublishRequest {
+  string topic = 1;
+  string sender = 2;
+  string body = 3;
+  string token = 4;
+}
+
+message PublishReply {
+  int64 id = 1;
+  string topic = 2;
+  string sender = 3;
+  string body = 4;
+  google.protobuf.Timestamp time = 5;
+}
+
+message SubscribeRequest {
+  string topic = 1;
+}
+
+message Message {
+  int64 id = 1;
+  string topic = 2;
+  string sender = 3;
+  string body = 4;
+  google.protobuf.Timestamp time = 5;
+}
+
+message ListTopicsRequest {}
+
+message ListTopicsReply {
+  repeated TopicInfo topics = 1;
+}
+
+message TopicInfo {
+  string name = 1;
+  int32 size = 2;
+}

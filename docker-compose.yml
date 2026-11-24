@@ -1,0 +1,97 @@
+services:
+  coffee-server:
+    build:
+      context: ./lab2-coffee-shop/csharp
+      dockerfile: Dockerfile.server
+    ports:
+      - "5000:5000"
+    command: ["5000"]
+
+  coffee-client:
+    build:
+      context: ./lab2-coffee-shop/csharp
+      dockerfile: Dockerfile.client
+    depends_on:
+      - coffee-server
+    stdin_open: true
+    tty: true
+    command: ["coffee-server", "5000", "client"]
+
+  coffee-provider:
+    build:
+      context: ./lab2-coffee-shop/csharp
+      dockerfile: Dockerfile.client
+    depends_on:
+      - coffee-server
+    stdin_open: true
+    tty: true
+    command: ["coffee-server", "5000", "provider"]
+
+  chat-alice:
+    build:
+      context: ./lab3-lan-chat/csharp
+      dockerfile: Dockerfile
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: ["Alice", "9000", "secret"]
+
+  chat-bob:
+    build:
+      context: ./lab3-lan-chat/csharp
+      dockerfile: Dockerfile
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: ["Bob", "9000", "secret"]
+
+  broker-http:
+    build:
+      context: ./lab4-message-broker/part1-http/broker
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    command: ["http://+:8080/"]
+
+  publisher-http:
+    build:
+      context: ./lab4-message-broker/part1-http/publisher
+      dockerfile: Dockerfile
+    depends_on:
+      - broker-http
+    stdin_open: true
+    tty: true
+    command: ["http://broker-http:8080", "grades", "teacher"]
+
+  subscriber-http:
+    build:
+      context: ./lab4-message-broker/part1-http/subscriber
+      dockerfile: Dockerfile
+    depends_on:
+      - broker-http
+    command: ["http://broker-http:8080", "grades"]
+
+  broker-grpc:
+    build:
+      context: ./lab4-message-broker/part2-grpc
+      dockerfile: broker/Dockerfile
+    ports:
+      - "5000:5000"
+
+  publisher-grpc:
+    build:
+      context: ./lab4-message-broker/part2-grpc
+      dockerfile: publisher/Dockerfile
+    depends_on:
+      - broker-grpc
+    stdin_open: true
+    tty: true
+    command: ["http://broker-grpc:5000", "grades", "teacher"]
+
+  subscriber-grpc:
+    build:
+      context: ./lab4-message-broker/part2-grpc
+      dockerfile: subscriber/Dockerfile
+    depends_on:
+      - broker-grpc
+    command: ["http://broker-grpc:5000", "grades"]

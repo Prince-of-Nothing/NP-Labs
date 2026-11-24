@@ -1,0 +1,11 @@
+bin/
+obj/
+target/
+broker-data/
+tokens.txt
+*.log
+chat-*.log
+.vs/
+
+*.exe
+
