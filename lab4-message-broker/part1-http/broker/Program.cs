@@ -148,6 +148,7 @@ class Program
                 HandleSubscribe(ctx, topicName, client);
                 return;
             }
+            Log($"404 {req.HttpMethod} {req.Url.AbsolutePath} from {client}");
             res.StatusCode = 404;
             res.Close();
         }
@@ -203,6 +204,7 @@ class Program
         try { doc = JsonDocument.Parse(bodyStr); }
         catch
         {
+            Log($"400 invalid json from {client} topic={topicName}");
             res.StatusCode = 400; WriteText(res, ""); return;
         }
         using (doc)
