@@ -1,0 +1,187 @@
+
+
+===== PAGE 1 =====
+
+Laboratory Work 3: A Local Network Chat
+Goal. Build a chat for the local network, using UDP sockets directly.
+There is no server: every copy of the program is a peer that both sends
+and receives. A message for the general channel reaches everybody with
+a single datagram, sent as a broadcast or to a multicast group; a private
+message goes to one person only. Find the others without a server, send
+each private message to the right peer, and, at the last level, encrypt the
+private messages so that nobody outside the chat can read them.
+Keywords: UDP sockets · broadcast · multicast · unicast · peer-to-peer ·
+key derivation · encryption
+1
+Requirements
+ Any programming language with a socket API.
+ Use the socket API directly: the equivalents of socket, bind, sendto, recvfrom,
+setsockopt and close (in C#, the Socket class with SocketType.Dgram; in
+Java, DatagramSocket; in Python, the socket module). Wrappers above it
+are not allowed: UdpClient in C#, socketserver in Python, and any library
+or framework for chat, messaging, RPC or service discovery.
+ One program, the chat: an interactive console program. There is no server;
+every running copy is a peer. The name of the user and the port of the chat
+are command-line parameters; all the peers of one chat use the same port.
+ Several peers can run on the same computer, and on dierent computers
+in the same network. If your network does not let broadcasts or multicast
+through (many Wi-Fi networks do not), use the hotspot of a phone.
+ Each peer writes a log le, with a line for every datagram that it sends,
+receives or drops: the time, the endpoint, the kind of message and the size.
+ A datagram that is not a valid message of your chat (from another program,
+random bytes, a message that is too long) is dropped and logged. The chat
+never crashes because of it.
+ A Git repository with the source code (for example, on GitHub or GitLab)
+and instructions to build and run the program; its link is sent to the teacher
+before the defense.
+2
+The chat
+The user types lines. A line that does not start with a slash is a message for the
+general channel. The commands are:
+
+
+===== PAGE 2 =====
+
+2
+Laboratory Work 3
+Command
+What it does
+text
+sends text to everybody (the general channel)
+/msg name text
+sends text to name only (a private message)
+/users
+shows who is online
+/quit
+leaves the chat
+A message has at most 500 characters. Every message is one datagram, and
+the format of the datagrams is yours (for example, JSON). The chat shows each
+message with its channel and the name of its author, and tells the user who joins
+and who leaves:
+[general] Ana: hello everyone
+[private] Ion: see you at five
+* Maria joined the chat
+* Ion left the chat
+3
+Task 1: The general channel
+Goal. One datagram for everybody.
+Each peer binds a socket to the port of the chat, on all the addresses of
+its computer. A line typed by the user is sent with one datagram, either as a
+broadcast or to a multicast group that every peer has joined, and every peer of
+the chat shows it with the name of its author: the author too, but only once.
+When several peers run on the same computer, each of them receives the general
+channel. Messages from the others are shown as soon as they arrive, even while
+the user is typing.
+Show it at the defense with at least three peers, on at least two computers.
+Questions for the defense.
+1. Why is the socket bound to all the addresses of the computer (0.0.0.0), and
+not to its IP address or to 127.0.0.1?
+2. How can several peers on the same computer bind the same port? Which of
+them receive a message of the general channel?
+3. Your own message comes back to you. How does your chat recognise it?
+4. Why at most 500 characters? What would happen to a message of 100 000
+characters?
+4
+Task 2: Who is online
+Goal. Find the others without a server.
+When a peer starts, it tells everybody that it has joined, and the others
+answer it at once: within a second it knows who is online, with the name and
+the endpoint of every peer. A name is unique: a peer that starts with a name
+already in use is told so, and does not join. Every 5 seconds each peer tells the
+
+
+===== PAGE 3 =====
+
+A Local Network Chat
+3
+others that it is still there. A peer that leaves with /quit says goodbye; a peer
+that has not been heard from for 15 seconds is considered gone. The chat shows
+who joins and who leaves, and /users shows the list.
+Questions for the defense.
+1. How does a new peer learn who is already online, and how long does it take?
+2. The process of a peer is killed. How and when do the others notice? Why
+can they not notice it at once, as a TCP server notices a closed connection?
+3. Two peers start with the same name at the same moment. What happens?
+5
+Task 3: Private messages
+Goal. Talk to one peer only.
+A private message is one datagram, sent only to the endpoint of its receiver:
+no other peer receives it, not even one on the same computer. Note that a
+datagram sent to a port that several sockets share reaches only one of them. A
+private message to a name that is not online gets an error message.
+Questions for the defense.
+1. Several peers on one computer share the port of the chat. How does a private
+message reach the right one?
+2. Why is a private message not sent to everybody, with the name of its receiver
+inside?
+3. What happens to a private message sent to a peer that left a second ago?
+4. UDP can lose a private message. How could the sender know that it arrived,
+and what would it do when it did not?
+6
+Task 4: Secure private messages
+Goal. Nobody outside the chat can read a private message.
+All the peers of a chat know a passphrase, given as a command-line param-
+eter. From it, every peer derives the same key with a key-derivation function.
+Every private message is encrypted with this key. The general channel is not
+encrypted.
+Questions for the defense.
+1. Why is the key derived with a key-derivation function, and not taken from
+the bytes of the passphrase?
+2. Which algorithm encrypts your messages? Why must its nonce (or IV) never
+be used twice with the same key, and where do yours come from?
+3. Every member of the chat knows the passphrase. Who can read a private
+message between Ana and Ion? What would be needed so that only the two
+of them can?
+4. Can somebody who does not know the passphrase change an encrypted mes-
+sage without the receiver noticing? What protects against it?
+
+
+===== PAGE 4 =====
+
+4
+Laboratory Work 3
+7
+Control questions
+1. Which promises of TCP does UDP not make? Which of them did your chat
+rebuild, and which did it do without?
+2. Why is one sendto always one recvfrom with UDP, while one send is not
+one receive with TCP? Why did your chat need no delimiter and no length
+prex?
+3. How big can a UDP datagram be? Why should it stay below about 1 400
+bytes on a real network?
+4. What is the dierence between broadcast and multicast? Which one does
+your chat use for the general channel, and what would change with the
+other one?
+5. How many sockets does your chat use? To which address and port is each of
+them bound, and why?
+6. What does the checksum in the UDP header protect against? Why is it not
+enough against somebody who changes your datagrams on purpose?
+8
+Bonus
+The following earns bonus points at the defense: two chats written by dierent
+students, or in two dierent programming languages, talking to each other (they
+must agree on a common message format).
+9
+Grading
+Each grade requires everything above it in Table 1. A task counts only if it works
+at the defense, and you can explain its code and answer its questions.
+Code you cannot explain does not count. At the defense, the teacher points to
+any part of your code: you explain what it does and why, and you make a small
+change to it on the spot (for example, a new command or another time limit).
+If you cannot, the task that code belongs to counts as not done, whoever wrote
+it: you, a colleague or an AI tool.
+Table 1. Requirements for each grade.
+Grade
+Completed
+5
+Task 1
+6
+Task 2
+7
+Task 3
+8
+Task 4
+9
+At least half of the control questions, answered at the defense
+10
+All control questions, answered at the defense

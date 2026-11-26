@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -69,19 +68,6 @@ func logDg(dir, endpoint, kind string, size int) {
 	}
 }
 
-func setReuse(fd uintptr) error {
-	h := syscall.Handle(fd)
-	if err := syscall.SetsockoptInt(h, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return err
-	}
-	_ = syscall.SetsockoptInt(h, syscall.SOL_SOCKET, syscall.SO_BROADCAST, 1)
-	if runtime.GOOS != "windows" {
-		// SO_REUSEPORT = 15 on Linux; required for several peers on one port.
-		_ = syscall.SetsockoptInt(h, syscall.SOL_SOCKET, 15, 1)
-	}
-	return nil
-}
-
 func listenUDP(port int) (*net.UDPConn, error) {
 	lc := net.ListenConfig{Control: func(network, address string, c syscall.RawConn) error {
 		var serr error
@@ -115,7 +101,9 @@ func localIP() string {
 	return "127.0.0.1"
 }
 
-func subnetBroadcast() net.IP {
+func broadcastTargets() []net.IP {
+	seen := map[string]bool{}
+	var out []net.IP
 	ifaces, _ := net.Interfaces()
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
@@ -123,20 +111,28 @@ func subnetBroadcast() net.IP {
 		}
 		addrs, _ := iface.Addrs()
 		for _, a := range addrs {
-			if ipnet, ok := a.(*net.IPNet); ok {
-				ip := ipnet.IP.To4()
-				if ip == nil {
-					continue
-				}
-				b := make(net.IP, 4)
-				for i := 0; i < 4; i++ {
-					b[i] = ip[i] | ^ipnet.Mask[i]
-				}
-				return b
+			ipnet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			ip := ipnet.IP.To4()
+			if ip == nil || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+				continue
+			}
+			b := make(net.IP, 4)
+			for i := 0; i < 4; i++ {
+				b[i] = ip[i] | ^ipnet.Mask[i]
+			}
+			if !seen[b.String()] {
+				seen[b.String()] = true
+				out = append(out, b)
 			}
 		}
 	}
-	return net.IPv4bcast
+	if !seen[net.IPv4bcast.String()] {
+		out = append(out, net.IPv4bcast)
+	}
+	return out
 }
 
 func broadcast(m Msg) {
@@ -144,7 +140,9 @@ func broadcast(m Msg) {
 	if err != nil || len(data) > 2000 {
 		return
 	}
-	for _, ip := range []net.IP{subnetBroadcast(), net.IPv4bcast} {
+	// Send on every interface: a multi-homed host (Wi-Fi + Hyper-V/VPN) would
+	// otherwise send 255.255.255.255 out the wrong one and never reach the LAN.
+	for _, ip := range broadcastTargets() {
 		addr := &net.UDPAddr{IP: ip, Port: chatPort}
 		n, err := genConn.WriteToUDP(data, addr)
 		logDg("SEND", addr.String(), m.T, n)
@@ -152,6 +150,23 @@ func broadcast(m Msg) {
 			logLine("send error: " + err.Error())
 		}
 	}
+}
+
+// endpointFromSource replaces the advertised address with the address the
+// datagram actually came from, keeping the advertised private port. A host
+// with several network cards may advertise the wrong interface in "ep".
+func endpointFromSource(ep string, src *net.UDPAddr) string {
+	if ep == "" || src == nil {
+		return ep
+	}
+	_, port, err := net.SplitHostPort(ep)
+	if err != nil {
+		return ep
+	}
+	if src.IP == nil || src.IP.IsUnspecified() {
+		return ep
+	}
+	return net.JoinHostPort(src.IP.String(), port)
 }
 
 func sendPrivate(endpoint string, m Msg) {
@@ -229,16 +244,16 @@ func recvGeneral() {
 				continue // own loopback
 			}
 			if m.Name == userName {
-				sendPrivate(m.Ep, Msg{T: "nameinuse", Name: m.Name})
+				sendPrivate(endpointFromSource(m.Ep, addr), Msg{T: "nameinuse", Name: m.Name})
 				continue
 			}
-			addPeer(m.Name, m.Ep)
+			addPeer(m.Name, endpointFromSource(m.Ep, addr))
 			broadcast(Msg{T: "hello", Name: userName, Ep: privEndpoint})
 		case "hello":
 			if m.Name == userName {
 				continue
 			}
-			addPeer(m.Name, m.Ep)
+			addPeer(m.Name, endpointFromSource(m.Ep, addr))
 		case "bye":
 			if m.Name == userName {
 				continue
@@ -248,7 +263,7 @@ func recvGeneral() {
 			if m.Name == userName {
 				continue
 			}
-			touchPeer(m.Name, m.Ep)
+			touchPeer(m.Name, endpointFromSource(m.Ep, addr))
 		case "gen":
 			if len(m.Text) > 500 {
 				logDg("DROP", addr.String(), "gen_too_long", n)

@@ -1,0 +1,93 @@
+{
+  "uptime_sec": 28.27,
+  "workers": 12,
+  "connections": 17,
+  "providers": 1,
+  "orders_accepted": 16,
+  "orders_refused": 0,
+  "orders_started": 16,
+  "orders_ready": 16,
+  "orders_cancelled": 0,
+  "deliveries": 1,
+  "alerts": 0,
+  "errors": 0,
+  "avg_queue_wait_ms": 1229.8,
+  "max_queue_wait_ms": 6563.9,
+  "avg_prep_ms": 5748.3,
+  "max_prep_ms": 6592.8,
+  "throughput_orders_per_sec": 0.57,
+  "per_worker": [
+    {
+      "worker": 0,
+      "orders": 2,
+      "busy_ms": 10922,
+      "utilization_pct": 38.6
+    },
+    {
+      "worker": 1,
+      "orders": 1,
+      "busy_ms": 6584,
+      "utilization_pct": 23.3
+    },
+    {
+      "worker": 2,
+      "orders": 1,
+      "busy_ms": 6593,
+      "utilization_pct": 23.3
+    },
+    {
+      "worker": 3,
+      "orders": 1,
+      "busy_ms": 6589,
+      "utilization_pct": 23.3
+    },
+    {
+      "worker": 4,
+      "orders": 1,
+      "busy_ms": 6573,
+      "utilization_pct": 23.2
+    },
+    {
+      "worker": 5,
+      "orders": 1,
+      "busy_ms": 6577,
+      "utilization_pct": 23.3
+    },
+    {
+      "worker": 6,
+      "orders": 2,
+      "busy_ms": 10921,
+      "utilization_pct": 38.6
+    },
+    {
+      "worker": 7,
+      "orders": 2,
+      "busy_ms": 8747,
+      "utilization_pct": 30.9
+    },
+    {
+      "worker": 8,
+      "orders": 2,
+      "busy_ms": 8748,
+      "utilization_pct": 30.9
+    },
+    {
+      "worker": 9,
+      "orders": 1,
+      "busy_ms": 6568,
+      "utilization_pct": 23.2
+    },
+    {
+      "worker": 10,
+      "orders": 1,
+      "busy_ms": 6570,
+      "utilization_pct": 23.2
+    },
+    {
+      "worker": 11,
+      "orders": 1,
+      "busy_ms": 6582,
+      "utilization_pct": 23.3
+    }
+  ]
+}

@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 using System.Threading;
 
 class Program
@@ -98,6 +99,13 @@ class Program
         }
     }
 
+    // Topic names become directory names, so reject anything that could escape broker-data.
+    static bool ValidTopic(string name) =>
+        name.Length is >= 1 and <= 64 && name != "." && name != ".." &&
+        name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-' || c == '.');
+
+    static readonly object PersistLock = new();
+
     static Topic GetOrCreateTopic(string name)
     {
         lock (TopicsLock)
@@ -164,6 +172,11 @@ class Program
     {
         var req = ctx.Request;
         var res = ctx.Response;
+        if (!ValidTopic(topicName))
+        {
+            Log($"400 invalid topic name from {client}");
+            res.StatusCode = 400; WriteText(res, ""); return;
+        }
         // Task3: token auth
         string? auth = req.Headers["Authorization"];
         TokenInfo? tokenInfo = null;
@@ -211,9 +224,21 @@ class Program
         using (doc)
         {
             var root = doc.RootElement;
-            string sender = root.TryGetProperty("sender", out var s) ? s.GetString() ?? "" : "";
-            string body = root.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "";
-            if (string.IsNullOrEmpty(sender) && !authRequired) sender = "anonymous";
+            string sender, body;
+            try
+            {
+                if (root.ValueKind != JsonValueKind.Object) throw new InvalidOperationException();
+                sender = root.TryGetProperty("sender", out var s) ? s.GetString() ?? "" : "";
+                body = root.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "";
+            }
+            catch (InvalidOperationException)
+            {
+                Log($"400 malformed message from {client} topic={topicName}");
+                res.StatusCode = 400; WriteText(res, ""); return;
+            }
+            // With auth on, the sender is the token's owner, not a client-supplied claim.
+            if (tokenInfo != null) sender = tokenInfo.Publisher;
+            else if (string.IsNullOrEmpty(sender)) sender = "anonymous";
 
             var topic = GetOrCreateTopic(topicName);
             Message msg;
@@ -228,11 +253,10 @@ class Program
                     Time = DateTime.UtcNow
                 };
                 topic.Messages.Add(msg);
+                // enqueue under the topic lock so delivery order matches id order
+                DeliveryQueue.Add(new DeliveryItem { Msg = msg });
             }
-            // persist
             PersistTopic(topic);
-            // enqueue delivery
-            DeliveryQueue.Add(new DeliveryItem { Msg = msg });
             // respond 202
             var respObj = new { id = msg.Id, topic = msg.Topic, sender = msg.Sender, body = msg.Body, time = msg.Time };
             res.StatusCode = 202;
@@ -244,6 +268,11 @@ class Program
     static void HandleSubscribe(HttpListenerContext ctx, string topicName, string client)
     {
         var res = ctx.Response;
+        if (!ValidTopic(topicName))
+        {
+            Log($"400 invalid topic name from {client}");
+            res.StatusCode = 400; WriteText(res, ""); return;
+        }
         var topic = GetOrCreateTopic(topicName);
         res.StatusCode = 200;
         res.ContentType = "application/x-ndjson";
@@ -327,16 +356,20 @@ class Program
     {
         try
         {
-            string dir = Path.Combine(dataDir, topic.Name);
-            Directory.CreateDirectory(dir);
-            string file = Path.Combine(dir, "messages.json");
-            string tmp = file + ".tmp";
-            List<Message> snapshot;
-            lock (topic.Lock) snapshot = new List<Message>(topic.Messages);
-            string json = JsonSerializer.Serialize(snapshot, FileJson);
-            File.WriteAllText(tmp, json);
-            if (File.Exists(file)) File.Delete(file);
-            File.Move(tmp, file);
+            // Serialize writers: snapshot and write under one lock so an older snapshot
+            // can never overwrite a newer one.
+            lock (PersistLock)
+            {
+                string dir = Path.Combine(dataDir, topic.Name);
+                Directory.CreateDirectory(dir);
+                string file = Path.Combine(dir, "messages.json");
+                string tmp = file + ".tmp";
+                List<Message> snapshot;
+                lock (topic.Lock) snapshot = new List<Message>(topic.Messages);
+                string json = JsonSerializer.Serialize(snapshot, FileJson);
+                File.WriteAllText(tmp, json);
+                File.Move(tmp, file, overwrite: true);
+            }
         }
         catch (Exception e) { Log($"Persist error: {e.Message}"); }
     }

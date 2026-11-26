@@ -1,0 +1,8 @@
+﻿Subscribing to http://192.168.1.33:8080 topic=grades
+[grades] Phone: http from phone 1
+[grades] Phone: http from phone 2
+[grades] Phone: http from phone 3
+[grades] Phone: http from phone 4
+[grades] Phone: http from phone 5
+[grades] Phone: auth ok phone message
+

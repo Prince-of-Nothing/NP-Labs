@@ -48,8 +48,8 @@ class Program
         if (args.Length >= 3) passphrase = args[2];
         if (!string.IsNullOrEmpty(passphrase))
         {
-            using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(passphrase, new byte[16], 100000, System.Security.Cryptography.HashAlgorithmName.SHA256);
-            key = kdf.GetBytes(32);
+            // fixed all-zero salt on purpose: the Go peer derives the same key, so they interoperate
+            key = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(passphrase, new byte[16], 100000, System.Security.Cryptography.HashAlgorithmName.SHA256, 32);
         }
 
         string logPath = $"chat-{userName}-{chatPort}.log";
@@ -156,8 +156,9 @@ class Program
         catch { return "127.0.0.1"; }
     }
 
-    static IPAddress GetBroadcastAddress()
+    static List<IPAddress> GetBroadcastAddresses()
     {
+        var result = new List<IPAddress>();
         try
         {
             foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
@@ -165,23 +166,34 @@ class Program
                 if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
                 foreach (var ua in ni.GetIPProperties().UnicastAddresses)
                 {
-                    if (ua.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ua.Address))
-                    {
-                        var mask = ua.IPv4Mask;
-                        if (mask != null)
-                        {
-                            byte[] ip = ua.Address.GetAddressBytes();
-                            byte[] m = mask.GetAddressBytes();
-                            byte[] bcast = new byte[4];
-                            for (int i = 0; i < 4; i++) bcast[i] = (byte)(ip[i] | ~m[i]);
-                            return new IPAddress(bcast);
-                        }
-                    }
+                    if (ua.Address.AddressFamily != AddressFamily.InterNetwork || IPAddress.IsLoopback(ua.Address)) continue;
+                    if (ua.Address.ToString().StartsWith("169.254.")) continue;
+                    var mask = ua.IPv4Mask;
+                    if (mask == null || mask.Equals(IPAddress.Any)) continue;
+                    byte[] ip = ua.Address.GetAddressBytes();
+                    byte[] m = mask.GetAddressBytes();
+                    byte[] bcast = new byte[4];
+                    for (int i = 0; i < 4; i++) bcast[i] = (byte)(ip[i] | ~m[i]);
+                    var addr = new IPAddress(bcast);
+                    if (!result.Contains(addr)) result.Add(addr);
                 }
             }
         }
         catch { }
-        return IPAddress.Broadcast;
+        if (!result.Contains(IPAddress.Broadcast)) result.Add(IPAddress.Broadcast);
+        return result;
+    }
+
+    // A host with several network cards may advertise the wrong interface in "ep".
+    // Trust the address the datagram actually came from and keep the private port.
+    static string EndpointFromSource(string ep, EndPoint remote)
+    {
+        if (string.IsNullOrEmpty(ep) || remote is not IPEndPoint rep) return ep;
+        int colon = ep.LastIndexOf(':');
+        if (colon <= 0) return ep;
+        string port = ep.Substring(colon + 1);
+        if (!int.TryParse(port, out _)) return ep;
+        return $"{rep.Address}:{port}";
     }
 
     static void Broadcast(object obj)
@@ -191,8 +203,9 @@ class Program
             string json = JsonSerializer.Serialize(obj);
             byte[] data = Encoding.UTF8.GetBytes(json);
             if (data.Length > 2000) return;
-            // subnet broadcast (works cross-process on Windows) + limited broadcast (fallback)
-            foreach (var addr in new[] { GetBroadcastAddress(), IPAddress.Broadcast })
+            // Send a directed broadcast on every interface (multi-homed hosts:
+            // Wi-Fi + Hyper-V/VPN) plus the limited broadcast as a fallback.
+            foreach (var addr in GetBroadcastAddresses())
             {
                 try
                 {
@@ -281,8 +294,9 @@ class Program
                     case "join":
                         {
                             string name = root.GetProperty("name").GetString() ?? "";
-                            string ep = root.GetProperty("ep").GetString() ?? "";
-                            if (name == userName && ep == privEndpoint) break; // our own loopback
+                            string rawEp = root.GetProperty("ep").GetString() ?? "";
+                            if (name == userName && rawEp == privEndpoint) break; // our own loopback
+                            string ep = EndpointFromSource(rawEp, remote);
                             if (name == userName)
                             {
                                 // another peer tries to use our name
@@ -303,7 +317,7 @@ class Program
                     case "hello":
                         {
                             string name = root.GetProperty("name").GetString() ?? "";
-                            string ep = root.GetProperty("ep").GetString() ?? "";
+                            string ep = EndpointFromSource(root.GetProperty("ep").GetString() ?? "", remote);
                             if (name == userName) break;
                             lock (PeersLock)
                             {
@@ -339,10 +353,13 @@ class Program
                                 if (Peers.TryGetValue(name, out var p))
                                 {
                                     p.LastSeen = DateTime.Now;
+                                    // a peer that restarted under the same name has a new private port
+                                    if (root.TryGetProperty("ep", out var hep) && hep.GetString() is { Length: > 0 } newEp)
+                                        p.Endpoint = EndpointFromSource(newEp, remote);
                                 }
                                 else
                                 {
-                                    Peers[name] = new Peer { Name = name, Endpoint = root.TryGetProperty("ep", out var e) ? e.GetString() ?? "" : "", LastSeen = DateTime.Now };
+                                    Peers[name] = new Peer { Name = name, Endpoint = EndpointFromSource(root.TryGetProperty("ep", out var e) ? e.GetString() ?? "" : "", remote), LastSeen = DateTime.Now };
                                     Log($"* {name} joined the chat");
                                 }
                             }
@@ -372,8 +389,9 @@ class Program
                         break;
                 }
             }
-            catch (JsonException)
+            catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
             {
+                // not JSON, or JSON missing/mistyping required fields: drop and log
                 LogDg("DROP", "unknown", "invalid_json", 0);
             }
             catch (Exception e)
@@ -443,7 +461,7 @@ class Program
                         break;
                 }
             }
-            catch (JsonException)
+            catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
             {
                 LogDg("DROP", "unknown", "invalid_json", 0);
             }

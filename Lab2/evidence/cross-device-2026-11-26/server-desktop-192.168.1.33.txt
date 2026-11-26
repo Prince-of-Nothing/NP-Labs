@@ -1,0 +1,70 @@
+[05:42:17.358] Stock initialized: coffee=40, tea=37, croissant=27
+[05:42:17.380] Started 12 workers
+[05:42:17.390] Listening on 0.0.0.0:5000
+[05:42:23.032] Connection from 192.168.1.5:56146
+[05:42:23.049] Provider identified: 192.168.1.5:56146
+[05:42:24.163] Delivery from 192.168.1.5:56146: coffee=40,tea=40,croissant=40
+[05:42:25.705] Connection from 192.168.1.5:56200
+[05:42:25.708] Connection from 192.168.1.5:56192
+[05:42:25.710] Connection from 192.168.1.5:56152
+[05:42:25.713] Connection from 192.168.1.5:56162
+[05:42:25.715] Connection from 192.168.1.5:56180
+[05:42:25.718] Connection from 192.168.1.5:56172
+[05:42:25.720] Connection from 192.168.1.5:56206
+[05:42:25.723] Connection from 192.168.1.5:56210
+[05:42:25.724] Connection from 192.168.1.5:56214
+[05:42:25.725] Connection from 192.168.1.5:56222
+[05:42:25.725] Connection from 192.168.1.5:56236
+[05:42:25.726] Connection from 192.168.1.5:56242
+[05:42:25.743] Connection from 192.168.1.5:56252
+[05:42:25.758] Connection from 192.168.1.5:56266
+[05:42:25.761] Connection from 192.168.1.5:56278
+[05:42:25.763] Connection from 192.168.1.5:56282
+[05:42:26.421] MENU to 192.168.1.5:56214
+[05:42:26.422] MENU to 192.168.1.5:56282
+[05:42:26.422] MENU to 192.168.1.5:56210
+[05:42:26.423] MENU to 192.168.1.5:56152
+[05:42:26.423] MENU to 192.168.1.5:56222
+[05:42:26.423] MENU to 192.168.1.5:56278
+[05:42:26.424] MENU to 192.168.1.5:56162
+[05:42:26.424] MENU to 192.168.1.5:56252
+[05:42:26.424] MENU to 192.168.1.5:56206
+[05:42:26.425] MENU to 192.168.1.5:56180
+[05:42:26.425] MENU to 192.168.1.5:56200
+[05:42:26.425] MENU to 192.168.1.5:56192
+[05:42:26.426] MENU to 192.168.1.5:56266
+[05:42:26.426] MENU to 192.168.1.5:56172
+[05:42:26.426] MENU to 192.168.1.5:56236
+[05:42:26.427] MENU to 192.168.1.5:56242
+[05:42:27.272] Order 4 accepted from 192.168.1.5:56236, prep 6000ms
+[05:42:27.274] Order 12 accepted from 192.168.1.5:56180, prep 4000ms
+[05:42:27.274] Order 9 accepted from 192.168.1.5:56210, prep 6000ms
+[05:42:27.274] Order 1 accepted from 192.168.1.5:56266, prep 6000ms
+[05:42:27.274] Order 11 accepted from 192.168.1.5:56192, prep 6000ms
+[05:42:27.275] Order 7 accepted from 192.168.1.5:56206, prep 6000ms
+[05:42:27.275] Order 6 accepted from 192.168.1.5:56162, prep 6000ms
+[05:42:27.275] Order 2 accepted from 192.168.1.5:56214, prep 6000ms
+[05:42:27.275] Order 5 accepted from 192.168.1.5:56152, prep 4000ms
+[05:42:27.276] Order 14 accepted from 192.168.1.5:56252, prep 4000ms
+[05:42:27.276] Order 3 accepted from 192.168.1.5:56282, prep 6000ms
+[05:42:27.276] Order 16 accepted from 192.168.1.5:56172, prep 6000ms
+[05:42:27.276] Order 15 accepted from 192.168.1.5:56242, prep 6000ms
+[05:42:27.277] Order 8 accepted from 192.168.1.5:56200, prep 4000ms
+[05:42:27.277] Order 10 accepted from 192.168.1.5:56222, prep 4000ms
+[05:42:27.277] Order 13 accepted from 192.168.1.5:56278, prep 4000ms
+[05:42:31.637] Order 5 ready for 192.168.1.5:56152
+[05:42:31.638] Order 8 ready for 192.168.1.5:56200
+[05:42:31.638] Order 10 ready for 192.168.1.5:56222
+[05:42:33.829] Order 6 ready for 192.168.1.5:56162
+[05:42:33.834] Order 1 ready for 192.168.1.5:56266
+[05:42:33.839] Order 2 ready for 192.168.1.5:56214
+[05:42:33.841] Order 15 ready for 192.168.1.5:56242
+[05:42:33.845] Order 4 ready for 192.168.1.5:56236
+[05:42:33.848] Order 7 ready for 192.168.1.5:56206
+[05:42:33.853] Order 3 ready for 192.168.1.5:56282
+[05:42:33.855] Order 9 ready for 192.168.1.5:56210
+[05:42:33.860] Order 16 ready for 192.168.1.5:56172
+[05:42:36.018] Order 14 ready for 192.168.1.5:56252
+[05:42:36.018] Order 13 ready for 192.168.1.5:56278
+[05:42:38.192] Order 12 ready for 192.168.1.5:56180
+[05:42:38.193] Order 11 ready for 192.168.1.5:56192

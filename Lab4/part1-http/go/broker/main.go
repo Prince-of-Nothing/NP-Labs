@@ -148,6 +148,8 @@ func (b *Broker) token(tok string) *TokenInfo {
 		return nil
 	}
 	for _, line := range strings.Split(string(data), "\n") {
+		// tolerate a UTF-8 BOM written by Windows editors (Notepad, PowerShell)
+		line = strings.TrimPrefix(line, "\uFEFF")
 		parts := strings.Fields(line)
 		if len(parts) < 3 {
 			continue

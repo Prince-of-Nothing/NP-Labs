@@ -1,0 +1,281 @@
+
+
+===== PAGE 1 =====
+
+Laboratory Work 4: A Message Broker
+Goal. Build a message broker: the program in the middle of many dis-
+tributed systems. Publishers send messages to a topic; the broker puts
+each one in a queue and delivers it, in the background, to every subscriber
+of that topic. Publishers and subscribers never talk to each other, only to
+the broker, so either side can stop, change or multiply without the other
+noticing. The lab has two parts, defended separately, and one grade. In
+Part 1 the broker speaks HTTP: a REST API with JSON, and it forwards
+each message to the subscribers of its topic over an answer that stays
+open. In Part 2 it speaks gRPC: the same broker and the same tasks,
+with a contract in Protocol Buers and a stream for each subscriber.
+Keywords: message broker · publish/subscribe · HTTP · REST ·
+streaming · gRPC · Protocol Buers
+1
+The broker
+A topic is a named channel: grades, news, orders. A publisher sends a message
+to one topic; the broker gives it an id (1, 2, 3, . . . in each topic) and the time, and
+keeps it. A subscriber of a topic gets the messages of that topic as they arrive,
+in order, once (Fig. 1). Publishers and subscribers know only the address of the
+broker: a publisher does not know who reads its messages, or whether anybody
+does at that moment.
+Publisher
+teacher
+Publisher
+Ana
+Broker
+grades
+15
+16
+17
+news
+8
+9
+each topic: its messages, in order
+Subscriber
+grades
+Subscriber
+grades
+Subscriber
+news
+publish
+publish
+deliver
+Fig. 1. Publishers and subscribers know only the broker.
+2
+Requirements
+ Any programming language with an HTTP server and client in its stan-
+dard library (Part 1) and with gRPC (Part 2). In C#: HttpListener and
+HttpClient; for Part 2, Grpc.AspNetCore and Grpc.Net.Client.
+
+
+===== PAGE 2 =====
+
+2
+Laboratory Work 4
+ In Part 1 the broker is built on the HTTP server of the standard library:
+HttpListener in C#, HttpServer in Java, http.server in Python. Web
+frameworks are not allowed: ASP.NET Core, Spring, Flask, Express, and the
+like.
+ At least three programs: the broker, a publisher and a subscriber, all of them
+console programs. The number of publishers and subscribers is dynamic: any
+number of them can start and stop at any time while the broker runs, on
+the same computer or on dierent computers.
+ The broker is yours. Not allowed: an existing broker, or a library for messag-
+ing (RabbitMQ, Kafka, Redis, NATS, MassTransit, SignalR, and the like).
+ The broker serves many clients at the same time: requests are handled con-
+currently, and the data that they share is protected, with thread-safe collec-
+tions or locks.
+ A request that the broker cannot accept gets an error and is logged. The
+broker never crashes because of a request.
+ The broker writes a log, with a line for every request and every delivery: the
+time, the client, the topic, the id of the message and the result.
+ A Git repository with the source code (for example, on GitHub or GitLab)
+and instructions to build and run the programs; its link is sent to the teacher
+before each defense.
+3
+Defenses and grades
+The two parts are defended separately: Part 1 after the lectures on HTTP, Part 2
+after the lecture on gRPC. The lab gets one grade, for both parts, from Table 1,
+and each grade requires everything above it in the table. A task counts only if
+it works at the defense and you can explain its code.
+Table 1. The requirements for each grade.
+Grade
+Part
+Completed
+5
+Part 1: HTTP
+Task 1: Publish and deliver
+6
+Task 2: Restarts
+7
+Task 3: Strangers
+8
+Part 2: gRPC
+Task 1: Publish and deliver
+9
+Task 2: Restarts
+10
+Task 3: Strangers
+Code you cannot explain does not count. At the defense, the teacher points to
+any part of your code: you explain what it does and why, and you make a small
+change to it on the spot (for example, a new eld in the messages or another
+time limit). If you cannot, the task that code belongs to counts as not done,
+whoever wrote it: you, a colleague or an AI tool.
+
+
+===== PAGE 3 =====
+
+A Message Broker
+3
+4
+Part 1: The broker over HTTP
+The broker is an HTTP server, and its API is the same for everybody (Table 2),
+so that any publisher and any subscriber work with any broker. Every body is
+JSON: a publisher sends the elds sender and body, and the broker adds id,
+topic and time to every message that it answers with or forwards.
+Table 2. The HTTP API of the broker.
+Request
+What it does
+Answer
+POST
+/topics/{topic}/messages queues a message
+202 Accepted
+GET
+/topics/{topic}/stream
+new messages, as they arrive 200 OK
+GET
+/topics
+the topics, and their sizes
+200 OK
+4.1
+Task 1: Publish and deliver
+Goal. The broker puts each message in a queue, and delivers it in the background
+to the subscribers of its topic.
+The broker answers the requests of Table 2, and the ids of a topic start
+at 1 and grow by one. A publish does not wait for the subscribers: the broker
+gives the message its id and time, puts it in a queue, and answers at once with
+202 Accepted and the message. In the background, a delivery task takes the
+messages out of the queue, in order, and writes each one to all the subscribers
+of its topic (Fig. 2). The requests are the producers, and the delivery task is the
+consumer, as in Lecture 3.
+A subscriber subscribes with GET /topics/topic/stream. A subscriber that
+is gone does not stop the delivery to the others: the broker forgets it when it can
+no longer write to it.
+Publisher
+Broker
+19
+18
+17
+the queue
+delivery
+in the background
+POST
+202
+Subscriber
+Subscriber
+17
+17
+their open answers
+Fig. 2. A publish goes into the queue and gets 202 Accepted at once. In the background,
+the delivery takes the messages out of the queue, in order, and writes each one into the
+open answers of the subscribers of its topic.
+
+
+===== PAGE 4 =====
+
+4
+Laboratory Work 4
+The publisher takes the address of the broker, the topic and the name of the
+user as command-line parameters, and publishes every line that the user types.
+The subscriber takes the address of the broker and the topic, and shows each
+message as it arrives, in order:
+[grades] teacher: Lab 3 grades are online
+Two publishers that publish to the same topic at the same time never lose a
+message and never get the same id. Show it at the defense with two publishers
+and two subscribers, on two computers.
+4.2
+Task 2: Restarts
+Goal. Nothing is lost when the broker restarts.
+The broker keeps the messages on disk: after a restart nothing is lost, and
+the ids go on. A broker killed in the middle of a write must not lose a le: write
+the new content to a temporary le, then put it in the place of the old one.
+4.3
+Task 3: Strangers
+Goal. Only known publishers can publish.
+Publishing needs a token, in the header Authorization: Bearer token. The
+broker reads the tokens from a le, each with the name of its publisher and the
+topics it may publish to. Without a token, or with an unknown one, a publish
+gets 401 Unauthorized with WWW-Authenticate: Bearer; with a good token,
+but to a topic that the token does not allow, it gets 403 Forbidden.
+
+
+===== PAGE 5 =====
+
+A Message Broker
+5
+5
+Part 2: The broker over gRPC
+The architecture stays: the same topics, messages and ids, the same publishers
+and subscribers, and the same three tasks. Nothing new to build: what changes
+is how the programs talk. In Part 1 every program had to agree by hand on the
+methods, the paths, the status codes and the elds of the JSON. In gRPC the
+conversation is a contract, written in Protocol Buers: the .proto le names the
+calls and the messages, and the code of the clients and of the server is generated
+from it, in any language. A call looks like a method call, the data travels in
+binary over HTTP/2, and a call can answer with a stream: the gRPC form of
+the answer that stays open in Part 1 (Fig. 3).
+ gRPC for everything: in this part the broker has no HTTP API.
+ One .proto le, shared by all the programs, and code generated from it (in
+C#: Grpc.Tools, with Google.Protobuf).
+ The contract starts like this, with a call for each request of Table 2; the other
+messages are yours to design.
+syntax = "proto3";
+package broker;
+import "google/protobuf/timestamp.proto";
+service Broker {
+// one request, one answer
+rpc Publish (PublishRequest) returns (PublishReply);
+// one request, a stream of answers
+rpc Subscribe (SubscribeRequest) returns (stream Message);
+// the topics, and their sizes
+rpc ListTopics (ListTopicsRequest) returns (ListTopicsReply);
+}
+message Message {
+int64 id = 1;
+string topic = 2;
+string sender = 3;
+string body = 4;
+google.protobuf.Timestamp time = 5;
+}
+5.1
+Task 1: Publish and deliver
+Goal. The broker puts each message in a queue, and delivers it in the background
+to the subscribers of its topic, over a stream.
+Task 1 of Part 1, in gRPC. Publish puts the message in the queue and
+answers at once with its id; Subscribe opens a stream, and the delivery, in the
+background, writes into it every new message of its topic, for as long as the
+stream is open; ListTopics answers with the topics and their sizes. A subscriber
+that is gone does not stop the delivery to the others. The publisher and the
+subscriber take the same parameters as in Part 1, and the subscriber shows the
+messages in the same way.
+
+
+===== PAGE 6 =====
+
+6
+Laboratory Work 4
+Publish: unary
+publisher
+broker
+one request, one answer
+Subscribe: server streaming
+subscriber
+broker
+one request, a stream that stays open
+PublishRequest
+PublishReply {id: 18}
+SubscribeRequest
+Message 18
+Message 19
+Message 20
+. . .
+Fig. 3. Publish and Subscribe, on one HTTP/2 connection.
+5.2
+Task 2: Restarts
+Goal. Nothing is lost when the broker restarts.
+Task 2 of Part 1, in gRPC: the broker keeps the messages on disk, so a restart
+loses nothing and the ids go on.
+5.3
+Task 3: Strangers
+Goal. Only known publishers can publish.
+Task 3 of Part 1, in gRPC, with metadata in the place of headers. Publishing
+needs a token, in the metadata authorization: Bearer token. The broker reads
+the tokens from a le, each with the name of its publisher and the topics it may
+publish to. Without a token, or with an unknown one, a publish is rejected with
+Unauthenticated; with a good token, but to a topic that the token does not
+allow, with PermissionDenied.

@@ -59,6 +59,13 @@ public class BrokerService : Broker.Broker.BrokerBase
         }
     }
 
+    // Topic names become directory names, so reject anything that could escape broker-data.
+    static bool ValidTopic(string name) =>
+        name.Length is >= 1 and <= 64 && name != "." && name != ".." &&
+        name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-' || c == '.');
+
+    static readonly object PersistLock = new();
+
     static Topic GetOrCreate(string name)
     {
         lock (TopicsLock)
@@ -73,9 +80,10 @@ public class BrokerService : Broker.Broker.BrokerBase
         }
     }
 
-    public override async Task<PublishReply> Publish(PublishRequest request, ServerCallContext context)
+    public override Task<PublishReply> Publish(PublishRequest request, ServerCallContext context)
     {
         string topicName = request.Topic;
+        if (!ValidTopic(topicName)) throw new RpcException(new Status(StatusCode.InvalidArgument, "invalid topic name"));
         // auth
         string? token = string.IsNullOrEmpty(request.Token) ? context.RequestHeaders.GetValue("authorization") : request.Token;
         if (token != null && token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) token = token.Substring(7).Trim();
@@ -92,17 +100,21 @@ public class BrokerService : Broker.Broker.BrokerBase
         MessageRec msg;
         lock (topic.Lock)
         {
-            msg = new MessageRec { Id = topic.NextId++, Topic = topicName, Sender = request.Sender, Body = request.Body, Time = DateTime.UtcNow };
+            // With auth on, the sender is the token's owner, not a client-supplied claim.
+            string sender = ti != null ? ti.Publisher : request.Sender;
+            msg = new MessageRec { Id = topic.NextId++, Topic = topicName, Sender = sender, Body = request.Body, Time = DateTime.UtcNow };
             topic.Messages.Add(msg);
+            // unbounded channel: TryWrite always succeeds; doing it under the lock keeps delivery in id order
+            DeliveryQueue.Writer.TryWrite(new DeliveryItem { Msg = msg });
         }
         Persist(topic);
-        await DeliveryQueue.Writer.WriteAsync(new DeliveryItem { Msg = msg });
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Publish id={msg.Id} topic={topicName}");
-        return new PublishReply { Id = msg.Id, Topic = msg.Topic, Sender = msg.Sender, Body = msg.Body, Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(msg.Time.ToUniversalTime()) };
+        return Task.FromResult(new PublishReply { Id = msg.Id, Topic = msg.Topic, Sender = msg.Sender, Body = msg.Body, Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(msg.Time.ToUniversalTime()) });
     }
 
     public override async Task Subscribe(SubscribeRequest request, IServerStreamWriter<Message> responseStream, ServerCallContext context)
     {
+        if (!ValidTopic(request.Topic)) throw new RpcException(new Status(StatusCode.InvalidArgument, "invalid topic name"));
         var topic = GetOrCreate(request.Topic);
         lock (topic.Lock) topic.Subscribers.Add(responseStream);
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber added topic={request.Topic}");
@@ -153,15 +165,18 @@ public class BrokerService : Broker.Broker.BrokerBase
     {
         try
         {
-            string dir = Path.Combine(dataDir, topic.Name);
-            Directory.CreateDirectory(dir);
-            string file = Path.Combine(dir, "messages.json");
-            string tmp = file + ".tmp";
-            List<MessageRec> snapshot;
-            lock (topic.Lock) snapshot = new List<MessageRec>(topic.Messages);
-            File.WriteAllText(tmp, JsonSerializer.Serialize(snapshot, FileJson));
-            if (File.Exists(file)) File.Delete(file);
-            File.Move(tmp, file);
+            // Snapshot and write under one lock so an older snapshot never overwrites a newer one.
+            lock (PersistLock)
+            {
+                string dir = Path.Combine(dataDir, topic.Name);
+                Directory.CreateDirectory(dir);
+                string file = Path.Combine(dir, "messages.json");
+                string tmp = file + ".tmp";
+                List<MessageRec> snapshot;
+                lock (topic.Lock) snapshot = new List<MessageRec>(topic.Messages);
+                File.WriteAllText(tmp, JsonSerializer.Serialize(snapshot, FileJson));
+                File.Move(tmp, file, overwrite: true);
+            }
         }
         catch { }
     }
@@ -179,5 +194,3 @@ public class BrokerService : Broker.Broker.BrokerBase
     }
     class TokenInfo { public string Publisher; public List<string> Topics; }
 }
-
-class DeliveryItem { public BrokerService.MessageRec Msg; }

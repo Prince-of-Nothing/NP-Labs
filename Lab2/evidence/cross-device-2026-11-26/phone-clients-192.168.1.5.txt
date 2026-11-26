@@ -1,0 +1,77 @@
+﻿[provider>] deliver coffee:40 tea:40 croissant:40
+=== starting 16 phone clients against 192.168.1.33:5000 (12 server workers) ===
+[phone C0>] order coffee:1
+[phone C1>] order tea:2
+[phone C2>] order croissant:3
+[phone C3>] order coffee:1
+[phone C4>] order tea:2
+[phone C5>] order croissant:3
+[phone C6>] order coffee:1
+[phone C7>] order tea:2
+[phone C8>] order croissant:3
+[phone C9>] order coffee:1
+[phone C10>] order tea:2
+[phone C11>] order croissant:3
+[phone C12>] order coffee:1
+[phone C13>] order tea:2
+[phone C14>] order croissant:3
+[phone C15>] order coffee:1
+
+=== phone client transcripts ===
+
+--- phone C0 (coffee:1) ---
+
+
+--- phone C1 (tea:2) ---
+
+
+--- phone C2 (croissant:3) ---
+
+
+--- phone C3 (coffee:1) ---
+
+
+--- phone C4 (tea:2) ---
+
+
+--- phone C5 (croissant:3) ---
+
+
+--- phone C6 (coffee:1) ---
+
+
+--- phone C7 (tea:2) ---
+
+
+--- phone C8 (croissant:3) ---
+
+
+--- phone C9 (coffee:1) ---
+
+
+--- phone C10 (tea:2) ---
+
+
+--- phone C11 (croissant:3) ---
+
+
+--- phone C12 (coffee:1) ---
+
+
+--- phone C13 (tea:2) ---
+
+
+--- phone C14 (croissant:3) ---
+
+
+--- phone C15 (coffee:1) ---
+
+
+summary: clients=16 accepted=0 refused=0
+
+=== provider transcript ===
+Connected to 192.168.1.33:5000 as provider
+Commands: menu | order <product>:<qty> ... | deliver <product>:<qty> ... (provider) | quit
+Delivery accepted
+[server gone]
+

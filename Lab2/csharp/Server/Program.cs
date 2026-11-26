@@ -36,6 +36,9 @@ namespace CoffeeShop.Server
         static readonly object IdLock = new();
 
         static int MaxMsg = 4096;
+        // Per-line cap on quantity: keeps summed quantities far from int overflow
+        // (an overflowed negative sum would pass the stock check and *add* stock).
+        const int MaxQty = 1_000_000;
 
         static readonly object ConsoleLock = new();
         static void Log(string msg)
@@ -138,8 +141,20 @@ namespace CoffeeShop.Server
                         line = line.TrimEnd('\r');
                         if (string.IsNullOrWhiteSpace(line)) continue;
                         // handle
-                        HandleLine(s, line, ref identified);
-                        if (s.Closed) return;
+                        try { HandleLine(s, line, ref identified); }
+                        catch (Exception e) when (e is InvalidOperationException or FormatException)
+                        {
+                            // valid JSON of the wrong shape (e.g. a number, or "cmd": 5)
+                            Metrics.Error();
+                            SendLine(s, Err("malformed request"));
+                            Log($"Malformed request from {s.Endpoint}: {line}");
+                        }
+                        if (s.Closed)
+                        {
+                            // a failed send marks the session closed; still cancel its orders
+                            HandleDisconnect(s);
+                            return;
+                        }
                     }
                 }
             }
@@ -236,7 +251,7 @@ namespace CoffeeShop.Server
             {
                 string prod = it.TryGetProperty("product", out var pe) ? pe.GetString() ?? "" : "";
                 int qty = it.TryGetProperty("qty", out var qe) && qe.TryGetInt32(out var qi) ? qi : 0;
-                if (!Products.Contains(prod) || qty <= 0)
+                if (!Products.Contains(prod) || qty <= 0 || qty > MaxQty)
                 {
                     Metrics.Error();
                     SendLine(s, Err($"invalid product or quantity: {prod}"));
@@ -305,7 +320,7 @@ namespace CoffeeShop.Server
             {
                 string prod = it.TryGetProperty("product", out var pe) ? pe.GetString() ?? "" : "";
                 int qty = it.TryGetProperty("qty", out var qe) && qe.TryGetInt32(out var qi) ? qi : 0;
-                if (!Products.Contains(prod) || qty <= 0) { SendLine(s, Err("invalid product/qty")); return; }
+                if (!Products.Contains(prod) || qty <= 0 || qty > MaxQty) { SendLine(s, Err("invalid product/qty")); return; }
                 items[prod] = items.TryGetValue(prod, out var v) ? v + qty : qty;
             }
             lock (StockLock)
