@@ -26,7 +26,7 @@ two-computers + two-languages bonus.
 | `server-metrics/server-summary.json` | counters, averages and per-worker utilisation |
 | `server-metrics/report.md` | generated report |
 | `server-metrics/queue_wait.svg`, `prep_time.svg`, `worker_orders.svg` | charts |
-| `desktop-csharp-clients-metrics/*` | a small desktop C# client run, included to show the client-side CSVs and `client_latency.svg` (the Go client writes no CSVs) |
+| `desktop-csharp-clients-metrics/*` | **5 desktop C# clients at the same time**: each writes `client-orders-<pid>.csv` + `client-summary-<pid>.json`, `report.md` merges all five, and `desktop-csharp-clients-192.168.1.33.txt` is their transcript (the Go client writes no CSVs) |
 
 ## Reproduce
 

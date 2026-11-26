@@ -1,0 +1,2 @@
+tag,order_id,items,prep_ms,sent_at,accepted_at,ready_at,accept_latency_ms,wait_ms,total_ms,status
+1,4,coffee:2,8000,2026-11-26T04:12:27.0410737Z,2026-11-26T04:12:27.0464715Z,2026-11-26T04:12:35.7919760Z,5,8746,8751,ready

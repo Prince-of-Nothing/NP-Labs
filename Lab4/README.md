@@ -41,8 +41,9 @@ API:
   Missing/unknown token → 401 + `WWW-Authenticate: Bearer`; wrong topic → 403.
 - Default prefix is `http://localhost:8080/` so it runs without Administrator.
   To accept LAN connections on Windows, run once as Administrator:
-  `netsh http add urlacl url=http://+:8080/ user=Everyone` and start the broker
-  with `http://+:8080/` (on Linux/Docker `http://+:8080/` works directly).
+  `powershell -ExecutionPolicy Bypass -File enable-lan-http.ps1` (adds the
+  `HttpListener` URL ACL and the firewall rule), then start the broker with
+  `http://+:8080/` (on Linux/Docker `http://+:8080/` works directly).
 
 Go (from `part1-http/go`):
 

@@ -1,0 +1,2 @@
+tag,order_id,items,prep_ms,sent_at,accepted_at,ready_at,accept_latency_ms,wait_ms,total_ms,status
+1,5,tea:1,3000,2026-11-26T04:12:27.1922792Z,2026-11-26T04:12:27.1982957Z,2026-11-26T04:12:30.4744939Z,6,3276,3282,ready

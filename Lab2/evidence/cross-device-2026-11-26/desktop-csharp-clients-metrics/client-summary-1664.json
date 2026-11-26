@@ -1,0 +1,13 @@
+{
+  "sent": 1,
+  "accepted": 1,
+  "refused": 0,
+  "ready": 1,
+  "pending": 0,
+  "avg_accept_latency_ms": 6.6,
+  "max_accept_latency_ms": 6.6,
+  "avg_ready_wait_ms": 6550.7,
+  "max_ready_wait_ms": 6550.7,
+  "avg_total_ms": 6557.3,
+  "max_total_ms": 6557.3
+}

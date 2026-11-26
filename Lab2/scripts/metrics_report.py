@@ -11,6 +11,7 @@ Writes report.md and *.svg into the metrics directory.
 """
 import argparse
 import csv
+import glob
 import os
 import sys
 from collections import defaultdict
@@ -82,7 +83,12 @@ def main():
     args = ap.parse_args()
     mdir = os.path.abspath(args.dir)
     server = read_csv(os.path.join(mdir, "server-orders.csv"))
-    client = read_csv(os.path.join(mdir, "client-orders.csv"))
+    # One CSV per client process (client-orders-<pid>.csv), so several clients
+    # can run at the same time; merge them in file-name order.
+    client_files = sorted(glob.glob(os.path.join(mdir, "client-orders*.csv")))
+    client = []
+    for path in client_files:
+        client.extend(read_csv(path))
     if not server and not client:
         print(f"No metrics found in {mdir}. Run the server and client first.")
         return 1
@@ -106,7 +112,7 @@ def main():
 
     lines = []
     lines.append("# Lab 2 — Coffee Shop metrics\n")
-    lines.append("Generated from `server-orders.csv` and `client-orders.csv`.\n")
+    lines.append("Generated from `server-orders.csv` and `client-orders*.csv`.\n")
     lines.append("## Summary\n")
     lines.append("| Metric | Value |")
     lines.append("|---|---:|")
@@ -152,7 +158,7 @@ def main():
                  "milliseconds", os.path.join(mdir, "client_latency.svg"))
 
     lines.append("## Files\n")
-    for name in ["server-orders.csv", "client-orders.csv",
+    for name in ["server-orders.csv"] + [os.path.basename(p) for p in client_files] + [
                  "queue_wait.svg", "prep_time.svg",
                  "worker_orders.svg", "client_latency.svg"]:
         if os.path.exists(os.path.join(mdir, name)):

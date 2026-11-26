@@ -112,3 +112,17 @@ same two cases.
 - `part2-grpc/broker`, `part2-grpc/publisher`, `part2-grpc/subscriber`
 - `part2-grpc/go/{broker,publisher,subscriber}`, `part2-grpc/go/pb` (generated)
 - `part2-grpc/proto/broker.proto` (shared contract)
+
+## Cross-device notes (2026-11-26)
+
+- `tokens.txt` may start with a UTF-8 BOM (Notepad/PowerShell); the Go brokers
+  strip it before parsing, so the first token does not become unknown (401).
+- With authentication on, the broker records the **token owner** as the sender,
+  not a client-supplied name; topic names are validated so they cannot escape
+  the `broker-data` directory.
+- Cross-device evidence: HTTP (Go broker on the desktop, Go phone + C# desktop
+  clients) and gRPC (C# broker, Go phone + C# desktop clients), 2 publishers and
+  2 subscribers, auth and restart checks:
+  [evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+- On Windows, run `enable-lan-http.ps1` once as Administrator to allow the C#
+  `HttpListener` broker on `http://+:8080/`.

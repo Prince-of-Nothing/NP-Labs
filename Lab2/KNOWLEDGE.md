@@ -140,3 +140,12 @@ reads stdin; console output is serialized so lines do not mix.
 - Two computers: the server binds `0.0.0.0`; clients take host/port arguments. ✔
 - Two languages: Rust and Go clients/server included. ✔
 - Stock saved on server restart: not implemented.
+
+## Cross-device notes (2026-11-26)
+
+- The server binds `0.0.0.0` and was exercised with 16 Go clients plus a
+  provider on an Android phone (12 workers, 16/16 ready); see
+  [evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+- Client metrics are written per process (`client-orders-<pid>.csv`,
+  `client-summary-<pid>.json`) so many clients can run at once; the report
+  script merges every client CSV.

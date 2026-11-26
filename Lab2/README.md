@@ -61,10 +61,10 @@ write into the same `metrics/` folder. Nothing has to be collected by hand.
   - `metrics/server-summary.json` — refreshed every 2 s: connections, accepted/
     refused/ready/cancelled, deliveries, alerts, avg/max queue wait, avg/max
     prep, throughput, per-worker orders and utilisation.
-- Client writes:
-  - `metrics/client-orders.csv` — tag, order id, items, accept latency, ready
-    wait, total time, status.
-  - `metrics/client-summary.json` — sent/accepted/refused/ready, avg/max
+- Client writes one set per client process, so many clients can run at once:
+  - `metrics/client-orders-<pid>.csv` — tag, order id, items, accept latency,
+    ready wait, total time, status.
+  - `metrics/client-summary-<pid>.json` — sent/accepted/refused/ready, avg/max
     latencies, pending.
 - Type `stats` in the client to print the live server summary and the client
   summary.
@@ -76,8 +76,9 @@ python Lab2/scripts/metrics_report.py
 ```
 
 This writes `metrics/report.md`, `queue_wait.svg`, `prep_time.svg`,
-`worker_orders.svg`, and `client_latency.svg`. The generated files are ignored
-by Git; only the code and the script are committed.
+`worker_orders.svg`, and `client_latency.svg`. It merges every
+`client-orders-<pid>.csv`, so several clients can contribute to one report. The
+generated files are ignored by Git; only the code and the script are committed.
 
 ## Docker
 

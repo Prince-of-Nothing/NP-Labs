@@ -35,11 +35,15 @@ namespace CoffeeShop.Client
             lock (Lock)
             {
                 Directory.CreateDirectory("metrics");
-                bool fresh = !File.Exists(Path.Combine("metrics", "client-orders.csv"));
-                csv = new StreamWriter(Path.Combine("metrics", "client-orders.csv"), append: true) { AutoFlush = true };
+                // One file per client process: several clients can run at the same
+                // time (the lab asks for many clients) without fighting over a file.
+                string id = Environment.ProcessId.ToString();
+                string ordersPath = Path.Combine("metrics", $"client-orders-{id}.csv");
+                bool fresh = !File.Exists(ordersPath);
+                csv = new StreamWriter(ordersPath, append: true) { AutoFlush = true };
                 if (fresh)
                     csv.WriteLine("tag,order_id,items,prep_ms,sent_at,accepted_at,ready_at,accept_latency_ms,wait_ms,total_ms,status");
-                summaryPath = Path.Combine("metrics", "client-summary.json");
+                summaryPath = Path.Combine("metrics", $"client-summary-{id}.json");
                 enabled = true;
                 Console.CancelKeyPress += (_, _) => Shutdown();
                 AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();

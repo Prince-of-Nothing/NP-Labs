@@ -143,3 +143,17 @@ message. Without the key the attacker cannot forge a valid tag.
    cryptographic MAC: an attacker who changes the payload can recompute the
    checksum. AES-GCM's tag provides integrity/authenticity against anyone without
    the key.
+
+## Cross-device notes (2026-11-26)
+
+- A multi-homed Windows host (Wi-Fi + Hyper-V) must send the general-channel
+  datagram to the directed broadcast of every interface (`192.168.1.255`), not
+  only to `255.255.255.255`; the limited broadcast can leave through the wrong
+  card. Both implementations now do this.
+- A peer may advertise the wrong interface in `ep`. On receiving
+  join/hello/heartbeat, keep the advertised private port but take the IP from
+  the datagram source; private messages then work on the real LAN address.
+- Verified with the Go peer on Android (192.168.1.5) and the C# peer on Windows
+  (192.168.1.33): discovery, general channel, encrypted private messages both
+  ways, leave. Logs:
+  [evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
