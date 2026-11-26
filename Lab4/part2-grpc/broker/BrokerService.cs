@@ -157,9 +157,12 @@ public class BrokerService : Broker.Broker.BrokerBase
             foreach (var sub in subs)
             {
                 try { await sub.Writer.WriteAsync(m); Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Delivered id={msg.Id} topic={msg.Topic} to {sub.Client}: ok"); }
-                catch { Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Delivery id={msg.Id} topic={msg.Topic} to {sub.Client}: write failed"); }
+                catch
+                {
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Delivery id={msg.Id} topic={msg.Topic} to {sub.Client}: write failed, subscriber removed");
+                    lock (topic.Lock) topic.Subscribers.Remove(sub);
+                }
             }
-            lock (topic.Lock) topic.Subscribers.RemoveAll(s => false); // keep; failures handled by Subscribe cancellation? gRPC stream write failure throws; we can't easily detect here. 
         }
     }
 

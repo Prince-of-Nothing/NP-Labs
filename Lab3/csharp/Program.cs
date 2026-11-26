@@ -40,6 +40,15 @@ class Program
         }
     }
 
+    // Characters, not UTF-16 code units, so the 500-character limit is the same
+    // for ASCII and non-ASCII messages.
+    static int CharCount(string s)
+    {
+        int count = 0;
+        foreach (var _ in s.EnumerateRunes()) count++;
+        return count;
+    }
+
     static void Main(string[] args)
     {
         if (args.Length < 2) { Console.WriteLine("Usage: Chat <name> <port> [passphrase]"); return; }
@@ -116,7 +125,7 @@ class Program
                 if (sp < 0) { Log("usage: /msg name text"); continue; }
                 string target = rest.Substring(0, sp);
                 string text = rest.Substring(sp + 1);
-                if (text.Length > 500) { Log("message too long (max 500)"); continue; }
+                if (CharCount(text) > 500) { Log("message too long (max 500)"); continue; }
                 Peer? targetPeer;
                 lock (PeersLock) Peers.TryGetValue(target, out targetPeer);
                 if (targetPeer == null) { Log($"ERROR: {target} not online"); continue; }
@@ -124,7 +133,7 @@ class Program
                 Log($"[private] you -> {target}: {text}");
                 continue;
             }
-            if (line.Length > 500) { Log("message too long (max 500)"); continue; }
+            if (CharCount(line) > 500) { Log("message too long (max 500)"); continue; }
             int id = Interlocked.Increment(ref msgCounter);
             Broadcast(new { t = "gen", from = userName, text = line, id = id });
             Log($"[general] {userName}: {line}");
@@ -294,10 +303,11 @@ class Program
         byte[] buf = new byte[4096];
         while (running)
         {
+            EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
+            int n = 0;
             try
             {
-                EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
-                int n = genSock.ReceiveFrom(buf, ref remote);
+                n = genSock.ReceiveFrom(buf, ref remote);
                 string text = Encoding.UTF8.GetString(buf, 0, n);
                 LogDg("RECV", remote.ToString(), "general", n);
                 using var doc = JsonDocument.Parse(text);
@@ -384,7 +394,7 @@ class Program
                         {
                             string from = root.GetProperty("from").GetString() ?? "";
                             string txt = root.GetProperty("text").GetString() ?? "";
-                            if (txt.Length > 500) { LogDg("DROP", remote.ToString(), "gen_too_long", n); break; }
+                            if (CharCount(txt) > 500) { LogDg("DROP", remote.ToString(), "gen_too_long", n); break; }
                             if (from == userName) break;
                             int mid = root.TryGetProperty("id", out var ide) && ide.TryGetInt32(out var iv) ? iv : 0;
                             if (mid != 0)
@@ -407,12 +417,12 @@ class Program
             catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
             {
                 // not JSON, or JSON missing/mistyping required fields: drop and log
-                LogDg("DROP", "unknown", "invalid_json", 0);
+                LogDg("DROP", remote.ToString(), "invalid_json", n);
             }
             catch (SocketException e) when (e.SocketErrorCode == SocketError.MessageSize)
             {
                 // datagram bigger than the receive buffer: the OS discards it, we log it
-                LogDg("DROP", "unknown", "too_long", buf.Length);
+                LogDg("DROP", remote.ToString(), "too_long", buf.Length);
             }
             catch (Exception e)
             {
@@ -426,10 +436,11 @@ class Program
         byte[] buf = new byte[4096];
         while (running)
         {
+            EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
+            int n = 0;
             try
             {
-                EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
-                int n = privSock.ReceiveFrom(buf, ref remote);
+                n = privSock.ReceiveFrom(buf, ref remote);
                 string text = Encoding.UTF8.GetString(buf, 0, n);
                 LogDg("RECV", remote.ToString(), "private", n);
                 using var doc = JsonDocument.Parse(text);
@@ -441,7 +452,7 @@ class Program
                         {
                             string from = root.GetProperty("from").GetString() ?? "";
                             string txt = root.GetProperty("text").GetString() ?? "";
-                            if (txt.Length > 500) { LogDg("DROP", remote.ToString(), "priv_too_long", n); break; }
+                            if (CharCount(txt) > 500) { LogDg("DROP", remote.ToString(), "priv_too_long", n); break; }
                             Log($"[private] {from}: {txt}");
                             break;
                         }
@@ -460,7 +471,7 @@ class Program
                                     aes.Decrypt(nonce, ct, tag, pt);
                                 }
                                 string msg = Encoding.UTF8.GetString(pt);
-                                if (msg.Length > 500) { LogDg("DROP", remote.ToString(), "privenc_too_long", n); break; }
+                                if (CharCount(msg) > 500) { LogDg("DROP", remote.ToString(), "privenc_too_long", n); break; }
                                 Log($"[private] {from}: {msg}");
                             }
                             catch (Exception e)
@@ -483,11 +494,11 @@ class Program
             }
             catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
             {
-                LogDg("DROP", "unknown", "invalid_json", 0);
+                LogDg("DROP", remote.ToString(), "invalid_json", n);
             }
             catch (SocketException e) when (e.SocketErrorCode == SocketError.MessageSize)
             {
-                LogDg("DROP", "unknown", "too_long", buf.Length);
+                LogDg("DROP", remote.ToString(), "too_long", buf.Length);
             }
             catch (Exception e)
             {

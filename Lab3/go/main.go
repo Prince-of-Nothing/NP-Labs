@@ -17,6 +17,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf8"
 )
 
 type Peer struct {
@@ -281,7 +282,7 @@ func recvGeneral() {
 			}
 			touchPeer(m.Name, endpointFromSource(m.Ep, addr))
 		case "gen":
-			if len(m.Text) > 500 {
+			if utf8.RuneCountInString(m.Text) > 500 {
 				logDg("DROP", addr.String(), "gen_too_long", n)
 				continue
 			}
@@ -323,7 +324,7 @@ func recvPrivate() {
 		}
 		switch m.T {
 		case "priv":
-			if len(m.Text) > 500 {
+			if utf8.RuneCountInString(m.Text) > 500 {
 				logDg("DROP", addr.String(), "priv_too_long", n)
 				continue
 			}
@@ -355,7 +356,7 @@ func recvPrivate() {
 				logLine("[private] " + m.From + ": <decryption failed>")
 				continue
 			}
-			if len(plain) > 500 {
+			if utf8.RuneCountInString(string(plain)) > 500 {
 				logDg("DROP", addr.String(), "privenc_too_long", n)
 				continue
 			}
@@ -499,7 +500,7 @@ func main() {
 			}
 			target := rest[:sp]
 			text := rest[sp+1:]
-			if len(text) > 500 {
+			if utf8.RuneCountInString(text) > 500 {
 				logLine("message too long (max 500)")
 				continue
 			}
@@ -513,7 +514,7 @@ func main() {
 			sendPrivateMessage(p.Endpoint, target, text)
 			logLine("[private] you -> " + target + ": " + text)
 		default:
-			if len(line) > 500 {
+			if utf8.RuneCountInString(line) > 500 {
 				logLine("message too long (max 500)")
 				continue
 			}

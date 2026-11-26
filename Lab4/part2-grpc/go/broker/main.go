@@ -182,10 +182,11 @@ func (b *Broker) token(tok string) *TokenInfo {
 	return nil
 }
 
-// authorize checks the authorization metadata when a tokens file exists.
-func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) error {
+// authorize checks the authorization metadata when a tokens file exists and
+// returns the token owner (empty when authentication is disabled).
+func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) (string, error) {
 	if _, err := os.Stat(b.tokensFile); err != nil {
-		return nil
+		return "", nil
 	}
 	tok := reqToken
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
@@ -194,7 +195,7 @@ func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) e
 		}
 	}
 	if tok == "" {
-		return status.Error(codes.Unauthenticated, "missing token")
+		return "", status.Error(codes.Unauthenticated, "missing token")
 	}
 	tok = strings.TrimSpace(tok)
 	if strings.HasPrefix(strings.ToLower(tok), "bearer ") {
@@ -202,23 +203,28 @@ func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) e
 	}
 	ti := b.token(tok)
 	if ti == nil {
-		return status.Error(codes.Unauthenticated, "unknown token")
+		return "", status.Error(codes.Unauthenticated, "unknown token")
 	}
 	if !ti.Topics[topic] {
-		return status.Error(codes.PermissionDenied, "topic not allowed")
+		return "", status.Error(codes.PermissionDenied, "topic not allowed")
 	}
-	return nil
+	return ti.Publisher, nil
 }
 
 func (b *Broker) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishReply, error) {
-	if err := b.authorize(ctx, req.Topic, req.Token); err != nil {
+	owner, err := b.authorize(ctx, req.Topic, req.Token)
+	if err != nil {
 		log.Printf("Publish rejected topic=%s: %v", req.Topic, err)
 		return nil, err
 	}
 	t := b.topic(req.Topic)
 	t.mu.Lock()
+	sender := req.Sender
+	if owner != "" {
+		sender = owner
+	}
 	msg := MessageRec{
-		ID: t.NextID, Topic: req.Topic, Sender: req.Sender, Body: req.Body, Time: time.Now().UTC(),
+		ID: t.NextID, Topic: req.Topic, Sender: sender, Body: req.Body, Time: time.Now().UTC(),
 	}
 	t.NextID++
 	t.Messages = append(t.Messages, msg)
