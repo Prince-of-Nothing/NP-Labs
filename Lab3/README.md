@@ -77,4 +77,6 @@ invalid datagrams dropped without crashing.
 Go peer on Android (192.168.1.5) + C# peer on Windows (192.168.1.33): discovery,
 general channel, encrypted private messages, leave, and complete datagram logs.
 See [Lab3/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+The same-port requirement (three peers on one computer) is verified in
+[Lab3/evidence/local-multi-peer-2026-11-26/](./evidence/local-multi-peer-2026-11-26/README.md).
 

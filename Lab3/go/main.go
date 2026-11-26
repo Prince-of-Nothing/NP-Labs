@@ -84,6 +84,16 @@ func listenUDP(port int) (*net.UDPConn, error) {
 }
 
 func localIP() string {
+	// Prefer the address of the interface the OS would use for the LAN. This
+	// works even when a sandbox (Android proot) hides the interface list.
+	if c, err := net.Dial("udp4", "8.8.8.8:80"); err == nil {
+		if a, ok := c.LocalAddr().(*net.UDPAddr); ok && a.IP != nil && !a.IP.IsUnspecified() && !a.IP.IsLoopback() {
+			ip := a.IP.String()
+			c.Close()
+			return ip
+		}
+		c.Close()
+	}
 	ifaces, _ := net.Interfaces()
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {

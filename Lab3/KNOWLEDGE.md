@@ -153,6 +153,13 @@ message. Without the key the attacker cannot forge a valid tag.
 - A peer may advertise the wrong interface in `ep`. On receiving
   join/hello/heartbeat, keep the advertised private port but take the IP from
   the datagram source; private messages then work on the real LAN address.
+- The Go peer also asks the OS for the address of the route to the LAN
+  (UDP connect to a public address) before falling back to the interface list,
+  so Android advertises `192.168.1.5` even when the sandbox hides the
+  interfaces.
+- Three Go peers share port 9100 on the phone (SO_REUSEPORT): each receives the
+  general channel, only Bob receives a private message, and all see the leave.
+  See [evidence/local-multi-peer-2026-11-26/](./evidence/local-multi-peer-2026-11-26/README.md).
 - Verified with the Go peer on Android (192.168.1.5) and the C# peer on Windows
   (192.168.1.33): discovery, general channel, encrypted private messages both
   ways, leave. Logs:
