@@ -46,3 +46,11 @@ Desktop.ini
 
 # Arm64 binaries staged only for pulling to the phone
 .opencode-dist/
+
+# Lab report build artifacts
+Lab2/report/*.aux
+Lab2/report/*.log
+Lab2/report/*.out
+Lab2/report/*.toc
+Lab2/report/*.synctex.gz
+.report-pages/

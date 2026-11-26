@@ -1,6 +1,8 @@
 # Lab 2 — Coffee Shop Server (TCP)
 
 Defense notes and control-question answers: [KNOWLEDGE.md](./KNOWLEDGE.md).
+Written report: [report/report.pdf](./report/report.pdf) (LaTeX source in
+[report/report.tex](./report/report.tex)).
 
 Three roles over raw TCP sockets: **server**, **client**, **provider**. No HTTP,
 no WebSocket, no RPC, no messaging library. In C# the `Socket` class is used

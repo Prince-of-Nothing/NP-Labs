@@ -1,6 +1,6 @@
 # Lab 2 — Coffee Shop metrics
 
-Generated from `server-orders.csv` and `client-orders.csv`.
+Generated from `server-orders.csv` and `client-orders*.csv`.
 
 ## Summary
 

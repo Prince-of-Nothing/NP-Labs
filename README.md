@@ -9,7 +9,8 @@ The `Lab1/usb/` folder is a local staging area for the eight files used in Task
 2 and is intentionally ignored by Git.
 
 ## Lab 2 — Coffee Shop Server (TCP)
-See [Lab2/README.md](./Lab2/README.md).
+See [Lab2/README.md](./Lab2/README.md). The written report is at
+[Lab2/report/report.pdf](./Lab2/report/report.pdf).
 - `Lab2/csharp`: Server + Client (client or provider role).
 - `Lab2/rust`: server + client.
 - `Lab2/go`: server + client.

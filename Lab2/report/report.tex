@@ -1,0 +1,642 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{hyperref}
+
+\definecolor{primary}{RGB}{18,52,86}
+\definecolor{secondary}{RGB}{41,128,185}
+\definecolor{accent}{RGB}{231,76,60}
+\definecolor{codebg}{RGB}{247,249,250}
+\definecolor{codeframe}{RGB}{209,213,219}
+\definecolor{codegreen}{RGB}{39,136,60}
+\definecolor{codegray}{RGB}{108,117,125}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    urlcolor=secondary,
+    citecolor=secondary
+}
+
+\lstdefinestyle{code}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{secondary}\bfseries,
+    stringstyle=\color{codegreen},
+    commentstyle=\color{codegray}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{codegray},
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b
+}
+\lstdefinestyle{plain}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    showstringspaces=false,
+    captionpos=b
+}
+\lstdefinestyle{term}{
+    backgroundcolor=\color{black},
+    basicstyle=\small\ttfamily\color{white},
+    frame=none,
+    numbers=none,
+    breaklines=true,
+    showstringspaces=false,
+    captionpos=b
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Network Programming --- Laboratory Work 2}
+\fancyhead[R]{\small Dinu Plesu, FAF-241}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\newcommand{\studentgroup}{FAF-241}
+
+\begin{document}
+\sloppy
+\setlength{\emergencystretch}{3em}
+
+\begin{titlepage}
+    \centering
+    {\large \textbf{TECHNICAL UNIVERSITY OF MOLDOVA}}\\[0.2cm]
+    {\large Faculty of Computers, Informatics and Microelectronics}\\[0.2cm]
+    {\large Department of Software Engineering and Automatics}\\[0.8cm]
+
+    \includegraphics[width=3.5cm]{figures/utm_logo.png}\\[1.2cm]
+
+    {\Large \textbf{LABORATORY WORK NO. 2}}\\[0.4cm]
+    {\LARGE \textbf{A Coffee Shop Server:\\ TCP Sockets, Worker Threads, and Shared State}}\\[0.4cm]
+    {\large Course: Network Programming}\\[2.5cm]
+
+    \begin{minipage}{0.45\textwidth}
+        \flushleft
+        \textbf{Author:}\\
+        Dinu \textsc{Plesu}\\
+        Student of group: \studentgroup
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \flushright
+        \textbf{Verified by:}\\
+        Lecturer / Supervisor\\
+        Fistic Cristofor
+    \end{minipage}
+
+    \vfill
+    {\large Chi\c{s}in\u{a}u --- 2026}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+The goal of this laboratory work is to build the server of a coffee shop using
+TCP sockets directly. Clients order products over a persistent TCP connection,
+the server takes the products from a shared stock, prepares the orders with a
+fixed number of workers, and tells each client when its order is ready. A
+provider connection can add products, and the server has to keep working when a
+client or the provider disappears.
+
+The implementation follows the task requirements literally:
+
+\begin{itemize}[itemsep=2pt]
+    \item the socket API is used directly (\texttt{Socket}, \texttt{Bind},
+          \texttt{Listen}, \texttt{Accept}, \texttt{Receive}, \texttt{Send});
+    \item three roles: \textbf{server}, \textbf{client} and \textbf{provider}
+          (the last two are one interactive program started in either role);
+    \item server port and client/provider host and port are command-line
+          arguments;
+    \item one worker per logical processor, a FIFO queue, one whole order per
+          worker;
+    \item the shared stock is protected against races;
+    \item the server logs every connection, order, delivery and error;
+    \item everything is in the Git repository
+          \url{https://github.com/Prince-of-Nothing/NP-Labs}.
+\end{itemize}
+
+The repository contains three implementations of the same protocol: \textbf{C\#}
+(primary, .NET 10), \textbf{Go} and \textbf{Rust}. The C\# and Go versions were
+also exercised between two computers: the server on Windows and the clients on
+an Android phone. The three optional bonuses are covered: two computers, two
+programming languages working together, and a stock that survives a server
+restart.
+
+\section{Architecture and protocol}
+
+\subsection{Roles and sockets}
+
+The server creates one listening socket bound to \texttt{0.0.0.0:5000}, calls
+\texttt{Listen} once, and then repeatedly calls \texttt{Accept}. Each accepted
+connection gets its own socket and its own reader thread. That thread parses
+commands, updates the shared state under locks, answers the client and, when an
+order is accepted, puts the order in the work queue.
+
+The client and provider are the same program. After connecting, the first
+message is \texttt{hello} with the role:
+
+\begin{lstlisting}[style=plain,caption={Handshake sent by the client or provider.}]
+{"cmd":"hello","role":"client"}
+{"cmd":"hello","role":"provider"}
+\end{lstlisting}
+
+Only a connection that identified itself as \texttt{provider} may deliver
+products; a client that tries receives an error.
+
+\subsection{Message framing}
+
+TCP is a byte stream: one \texttt{Send} is not one \texttt{Receive}. Two
+messages can arrive together, and one message can arrive in two pieces. The
+protocol therefore uses newline-delimited JSON. The server keeps a string
+buffer, appends every received chunk, and processes every complete line. A line
+longer than 4096 bytes is rejected as invalid input, so a malicious client
+cannot make the server allocate without bound.
+
+Every message is one JSON object. Table~\ref{tab:protocol} lists the commands
+and the answers.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+Direction & Message & Meaning \\
+\midrule
+client $\rightarrow$ server & \texttt{hello} & identify as client or provider \\
+client $\rightarrow$ server & \texttt{menu} & request the products and stock \\
+client $\rightarrow$ server & \texttt{order} & order a list of products and quantities \\
+provider $\rightarrow$ server & \texttt{deliver} & add products to the stock \\
+client $\rightarrow$ server & \texttt{stats} & request the live server summary \\
+client $\rightarrow$ server & \texttt{quit} & close the connection \\
+\midrule
+server $\rightarrow$ client & \texttt{menu} & current stock \\
+server $\rightarrow$ client & \texttt{order\_accepted} & id, preparation time, tag \\
+server $\rightarrow$ client & \texttt{order\_refused} & product and how many are left \\
+server $\rightarrow$ client & \texttt{order\_ready} & order id is ready \\
+server $\rightarrow$ client & \texttt{alert} & low stock (provider only) \\
+server $\rightarrow$ provider & \texttt{delivery\_ok} & delivery accepted \\
+server $\rightarrow$ client & \texttt{stats} & connections, orders, averages \\
+server $\rightarrow$ client & \texttt{error} & invalid command or parameter \\
+\bottomrule
+\end{tabularx}
+\caption{The line-delimited JSON protocol.}
+\label{tab:protocol}
+\end{table}
+
+An order is answered immediately, as the task requires:
+
+\begin{lstlisting}[style=plain,caption={An order is accepted at once; readiness arrives later.}]
+{"cmd":"order","items":[{"product":"coffee","qty":1}]}
+{"type":"order_accepted","id":3,"prep":4000,"tag":0}
+...
+{"type":"order_ready","id":3,"tag":0}
+\end{lstlisting}
+
+\subsection{Workers, queue and shared state}
+
+At startup the server reads \texttt{Environment.ProcessorCount} (12 on the test
+machine, 8 physical cores). It starts exactly that many workers. The
+connection threads are the \textbf{producers}: they validate an order, take it
+from the stock at once and put it in a blocking queue of \texttt{Order} objects of
+unbounded/1000 capacity. The workers are the \textbf{consumers}: a free worker
+takes the oldest order and simulates preparation by waiting.
+
+The main shared objects and their protection are:
+
+\begin{itemize}[itemsep=2pt]
+    \item the stock dictionary (coffee, tea, croissant) --- protected by
+          \texttt{StockLock}; the stock check and the decrement happen in one
+          critical section, so the last croissant cannot be sold twice;
+    \item the order id counter --- protected by \texttt{IdLock};
+    \item the list of sessions and the provider list --- protected by
+          \texttt{SessionsLock};
+    \item each connection writes from more than one thread (reader answer,
+          worker readiness, alerts), so every session has its own write lock;
+    \item the metrics counters --- protected by the metrics lock.
+\end{itemize}
+
+\subsection{Provider, deliveries and alerts}
+
+The provider is a normal connection whose \texttt{hello} carried the provider
+role; the server keeps it in a separate list. A delivery is validated and added
+to the stock in one critical section. A client that tries to deliver gets
+\texttt{only provider can deliver}.
+
+After every order, delivery and cancellation the server checks the stock. When a
+product falls below 5, every connected provider receives an \texttt{alert}
+immediately. When a provider reconnects, the server sends the current low-stock
+alerts again, without waiting for a request. Otherwise, a provider that was
+disconnected would never learn that the shop is almost empty.
+
+\subsection{Disconnects and cancellation}
+
+Every order has a cancellation token. The reader thread notices a closed
+connection when \texttt{Receive} returns 0 or fails with a reset. It then:
+cancels all orders of that client, removes those still in the queue, and wakes
+the worker preparing the current order. The worker stops waiting,
+returns the products to the stock, removes the order from the session and
+continues with the next order. Products that were already ``prepared'' are
+lost, as required: the next order waits the full preparation again.
+
+The provider disappearing does not stop the shop. It is removed from the
+provider list, the stock stays as it is, and the server continues to serve
+clients. Every invalid input (unknown command, wrong parameters, too long line,
+random bytes) produces an error answer and never crashes the server.
+
+\subsection{Metrics and automatic report}
+
+The server writes \texttt{metrics/server-orders.csv} after every finished order
+(order id, endpoint, items, expected and actual preparation, queue wait, worker
+id, status) and refreshes \texttt{metrics/server-summary.json} every two
+seconds (connections, accepted/refused/ready/cancelled, deliveries, alerts,
+averages, throughput, per-worker orders and utilisation).
+
+Each C\# client writes one \path{metrics/client-orders-<pid>.csv} and
+\texttt{client-summary-<pid>.json}. The files are per process so several clients
+can run at the same time without fighting over the same file. The Python script
+\texttt{Lab2/scripts/metrics\_report.py} merges all client CSVs with the server
+CSV and produces \texttt{report.md} and SVG charts, without third-party
+libraries.
+
+\subsection{Stock persistence (bonus)}
+
+The stock is written to \texttt{stock-state.json} in the server working
+directory after every accepted order, delivery and cancellation refund. The
+write is atomic: a snapshot is serialised, written to a temporary file, and
+renamed over the old file. A missing or corrupt file falls back to a random
+stock. At startup the server loads the file and logs:
+
+\begin{lstlisting}[style=term,caption={A restarted server keeps the remaining stock.}]
+[06:16:22.563] Stock loaded from stock-state.json: coffee=20, tea=19, croissant=21
+[06:16:22.573] Started 12 workers
+[06:16:22.577] Listening on 0.0.0.0:5000
+\end{lstlisting}
+
+The bonus is implemented in both the C\# and the Go server. A corrupt file is
+rejected, not partially applied, and the server starts with a random stock
+instead.
+
+\section{Testing and results}
+
+\subsection{Environment}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+Component & Value used for the measurements \\
+\midrule
+CPU & 13th Gen Intel Core i5-13420H, 8 cores, 12 logical processors \\
+RAM & 16 GB (15.7 GiB usable) \\
+Storage & Samsung SSD 990 PRO 2 TB; Realtek RTL9210 NVMe enclosure \\
+Operating system & Windows 11 IoT Enterprise LTSC, 10.0.26300 \\
+Runtime & .NET 10.0.404; Go 1.27.4; Rust stable \\
+Phone & Android, arm64 Go binaries (Acode/Alpine userland), Wi-Fi 192.168.1.5 \\
+Desktop & Wi-Fi 192.168.1.33 \\
+\bottomrule
+\end{tabularx}
+\caption{Test environment.}
+\end{table}
+
+The desktop and the phone are on the same Wi-Fi network. The server was started
+on the desktop; the phone clients connected to \texttt{192.168.1.33:5000}.
+
+\subsection{Single client and invalid input}
+
+A client asks for the menu and orders one coffee. The server answers at once
+with the order number and the preparation time (4000 ms), and the client remains
+free to ask for the menu or order again while it waits. About four seconds
+later the worker sends \texttt{order\_ready}. Unknown products, a zero or
+negative quantity, a missing parameter and random bytes all produce an
+\texttt{error} line; the connection remains usable and the server does not
+crash.
+
+\subsection{Many clients and the shared stock}
+
+Two independent runs were measured.
+
+\textbf{Local run.} Five C\# clients ran at the same time against the desktop
+server. With 12 workers, all five orders started immediately; there was no
+queueing. The client-side metrics show an average acceptance latency of
+6.6 ms and an average wait for readiness of 5901.2 ms.
+
+\textbf{Cross-device run.} The provider and 16 Go clients ran on the phone
+against the C\# server on the desktop (cross-language, two computers). This is
+more clients than the 12 workers, so four orders had to wait in the FIFO queue.
+Table~\ref{tab:cross} summarises the server, and Figure~\ref{fig:queue} shows
+the queue wait per order.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+\toprule
+Metric & Value \\
+\midrule
+Workers & 12 \\
+Connections (16 clients + 1 provider) & 17 \\
+Orders accepted / ready / refused / cancelled & 16 / 16 / 0 / 0 \\
+Deliveries & 1 \\
+Average queue wait & 1229.8 ms \\
+Maximum queue wait & 6563.9 ms \\
+Average actual preparation & 5748.3 ms \\
+Maximum actual preparation & 6592.8 ms \\
+Throughput & 0.57 orders/s \\
+\bottomrule
+\end{tabularx}
+\caption{Cross-device run: 16 Go clients on an Android phone, 12 workers on the desktop.}
+\label{tab:cross}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/queue_wait.png}
+\caption{Queue wait per order in the 16-client run. Twelve orders started at once; three waited about 4.4 s for a free worker and one waited 6.6 s.}
+\label{fig:queue}
+\end{figure}
+
+All orders were accepted once and all became ready once. The last-item race was
+tested separately: with exactly one croissant in stock, two clients ordered it
+at the same moment; the \texttt{StockLock} critical section accepted exactly one
+and refused the other with \texttt{available: 0}. The per-worker distribution
+(Figure~\ref{fig:workers}) shows the FIFO behaviour: workers that finished early
+took a queued order, so four workers prepared two orders and the other eight
+prepared one.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/worker_orders.png}
+\caption{Orders prepared by each worker in the 16-client run.}
+\label{fig:workers}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/lab2-clients.png}
+\caption{A provider and three clients against one server; the stock has already been increased by the delivery and all three orders become ready.}
+\label{fig:clients}
+\end{figure}
+
+\subsection{Provider, deliveries and alerts}
+
+The provider delivered \texttt{coffee:15 tea:15 croissant:15}; the stock rose
+immediately and the delivery was logged with the provider endpoint. A client
+that sent \texttt{deliver} received \texttt{only provider can deliver}. When a
+product is below 5, the provider receives an \texttt{alert} immediately; the
+same alerts are sent again when a provider reconnects. A provider disconnect
+does not stop the shop, and another provider can connect later.
+
+\subsection{Failures}
+
+A client was killed in the middle of an order. The server noticed the closed
+connection, cancelled the queued/in-progress order, returned the products to the
+stock and continued serving the other clients. A client that lost the server
+printed \texttt{[server gone]} and exited with code 0. Random bytes and
+oversized lines produced errors only. These behaviours are also described in
+\texttt{Lab2/KNOWLEDGE.md} and were verified with the test drivers in the
+repository history.
+
+\subsection{Stock persistence}
+
+The same sequence was run against the C\# and the Go server: fresh stock, order
+one coffee, restart, deliver five tea, restart. Tables~\ref{tab:stockcs} and
+\ref{tab:stockgo} show that neither the order nor the delivery is lost and that
+the random stock is not rolled again. Figure~\ref{fig:stock} shows the C\#
+server startup after a restart.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+Phase & coffee & tea & croissant \\
+\midrule
+fresh & 21 & 19 & 21 \\
+after \texttt{coffee:1} & 20 & 19 & 21 \\
+after restart & 20 & 19 & 21 \\
+after \texttt{deliver tea:5} & 20 & 24 & 21 \\
+after second restart & 20 & 24 & 21 \\
+\bottomrule
+\end{tabular}
+\caption{Stock persistence, C\# server (all four checks passed).}
+\label{tab:stockcs}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+Phase & coffee & tea & croissant \\
+\midrule
+fresh & 24 & 46 & 30 \\
+after \texttt{coffee:1} & 23 & 46 & 30 \\
+after restart & 23 & 46 & 30 \\
+after \texttt{deliver tea:5} & 23 & 51 & 30 \\
+after second restart & 23 & 51 & 30 \\
+\bottomrule
+\end{tabular}
+\caption{Stock persistence, Go server (all four checks passed).}
+\label{tab:stockgo}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\linewidth]{figures/lab2-stock.png}
+\caption{A restarted C\# server loading the saved stock before accepting clients.}
+\label{fig:stock}
+\end{figure}
+
+\subsection{Cross-device evidence}
+
+The cross-device run used the C\# server and the Go client/provider on the
+phone. The server console (Figure~\ref{fig:server}) shows the provider
+delivery, the connections and the accepted/ready orders; the phone-side
+transcript and the complete metrics are in
+\path{Lab2/evidence/cross-device-2026-11-26/}. The run also demonstrates the
+two bonuses: two computers and two languages.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/lab2-server.png}
+\caption{The C\# server: random stock, 12 workers, provider delivery and accepted/ready orders.}
+\label{fig:server}
+\end{figure}
+
+\section{Answers to the control questions}
+
+\begin{description}[style=nextline,leftmargin=0pt,itemsep=3pt]
+    \item[1. Listening socket versus accepted sockets.]
+    The listening socket is bound to the server port and is never used to send
+    data; \texttt{Accept} creates one connected socket per client. With five
+    clients and one provider the server has one listening socket and six
+    accepted sockets.
+
+    \item[2. One send is not one receive.]
+    TCP is a byte stream with no message boundaries. The server buffers bytes
+    and splits at newline; a message split in two is only processed after its
+    newline arrives, and two messages in one receive are processed one by one.
+
+    \item[3. \texttt{Receive} returns 0 or fails with reset.]
+    Zero means the other side closed the connection in an orderly way. A reset
+    means the connection was aborted (process killed, network error). Both mean
+    the client is gone; its orders are cancelled and products are returned.
+
+    \item[4. Producer--consumer.]
+    The producers are the connection threads (commands), the queue is the
+    blocking queue of \texttt{Order} objects, and the consumers are the workers. When
+    the queue is empty workers block; when it is full the producers wait.
+
+    \item[5. Cost of a waiting thread and 1000 clients.]
+    A blocked thread costs a stack (about 1 MB of virtual memory) and a context
+    switch when it wakes. With 1000 clients a thread per connection becomes
+    expensive; an asynchronous/event-driven model (\texttt{async}/await or
+    \texttt{epoll}) would scale better.
+
+    \item[6. Race without locks.]
+    Two threads read the same last croissant, both see 1, both decrement and
+    both accept, so two clients get one product. The stock lock makes the check
+    and the decrement one atomic critical section.
+
+    \item[7. What identifies a TCP connection.]
+    The 4-tuple (client IP, client port, server IP, server port). Five clients
+    on one machine use five different ephemeral source ports, so the server can
+    accept all five on the same port.
+
+    \item[8. Why answer at once and notify later.]
+    The client should not block for seconds; it can order again or ask for the
+    menu while the workers prepare. The worker sends \texttt{order\_ready} when
+    the preparation finishes.
+
+    \item[9. Worker and client reading the same connection.]
+    The server writes from several threads. Each session has a write lock, and
+    every message is one complete JSON line, so two threads cannot interleave
+    bytes of two answers.
+
+    \item[10. Why one worker per CPU core.]
+    The number of workers matches the available logical processors. The
+    preparation is a simulated wait, but the same architecture is used for
+    CPU-bound work; twice as many workers would only add context switches and
+    memory, without more CPU parallelism.
+
+    \item[11. How the server knows the provider.]
+    It is the connection whose \texttt{hello} role is \texttt{provider}; it is
+    kept in a separate list. A regular client that sends \texttt{deliver} is
+    rejected.
+
+    \item[12. Delivery and order at the same moment.]
+    Both operations take \texttt{StockLock}; the two updates are serialised, so
+    no change is lost. The final stock is the sum of both effects.
+
+    \item[13. Which thread sends the alert.]
+    The connection thread that performed the order/delivery (after releasing the
+    stock lock) calls the alert check and writes to every provider; the same
+    method is called for a newly connected provider.
+
+    \item[14. How a disappearance is noticed.]
+    A graceful close or a reset is noticed immediately by \texttt{Receive}.
+    A silent network loss is not immediate: TCP retransmits and eventually
+    times out; heartbeats would be needed for a faster detection.
+
+    \item[15. Cancelling an order being prepared.]
+    The client session cancels the order's token. The worker checks the token
+    during its short sleeps, stops, puts the products back under the stock lock
+    and drops the order. The next order for those products waits the full
+    preparation.
+
+    \item[16. Reading and typing at the same time.]
+    The client has a separate receive thread that prints server messages
+    immediately, while the main thread reads the keyboard. Otherwise a blocking
+    read of the keyboard would hide the \texttt{order\_ready} until the user
+    pressed Enter.
+\end{description}
+
+\section{Conclusion}
+
+The coffee shop server meets all four tasks and the three optional bonuses. The
+direct socket implementation handles framing, many concurrent clients, a shared
+stock with a lock, a provider with immediate alerts, client disappearance and
+invalid input without crashing. The measurements show the expected FIFO
+behaviour: with more clients than workers the extra orders queue, and the
+per-worker numbers show how the queue is drained. The cross-device run proves
+the protocol between C\# on Windows and Go on Android, and the stock-persistence
+bonus works in both server implementations. The metrics files make the report
+reproducible: the same CSV/JSON files generate the tables and charts after any
+run.
+
+\begin{thebibliography}{9}
+\bibitem{task} Laboratory Work 2: A Coffee Shop Server, Network Programming,
+Technical University of Moldova, 2026.
+\bibitem{repo} NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
+branch \texttt{final/labs-2-3-4-2026-11-26}.
+\bibitem{knowledge} NP-Labs, \texttt{Lab2/KNOWLEDGE.md} and
+\texttt{Lab2/README.md}.
+\end{thebibliography}
+
+\appendix
+\section{Build and run}
+
+\begin{lstlisting}[style=term,caption={Build and start the C\# server/client.}]
+dotnet build Lab2/csharp/Server/Server.csproj
+dotnet build Lab2/csharp/Client/Client.csproj
+dotnet run --project Lab2/csharp/Server/Server.csproj -- 5000
+dotnet run --project Lab2/csharp/Client/Client.csproj -- 127.0.0.1 5000 client
+dotnet run --project Lab2/csharp/Client/Client.csproj -- 127.0.0.1 5000 provider
+\end{lstlisting}
+
+The repository also has a one-command build for all labs: run
+\texttt{scripts/build-all.ps1} in PowerShell (Windows) or
+\texttt{./scripts/build-all.sh} (Linux/macOS). It publishes the
+C\# projects and builds the Go/Rust binaries, including the phone arm64
+binaries, under \texttt{dist/}.
+
+\section{Evidence map}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+Evidence & Content \\
+\midrule
+\path{Lab2/evidence/cross-device-2026-11-26/} & 16 Go clients on a phone + C\# server: transcripts, server metrics, charts, report \\
+\texttt{Lab2/evidence/stock-persistence-2026-11-26/} & C\# and Go restart tests with before/after stock and logs \\
+\texttt{Lab2/evidence/.../desktop-csharp-clients-metrics/} & five simultaneous C\# clients, per-process client metrics and merged report \\
+\texttt{Lab2/report/report.pdf} & this report (same formatting as Lab 1) \\
+\texttt{docs/tutorials/01-launch.md} & launch tutorial with screenshots \\
+\texttt{docs/tutorials/02-testing.md} & defense/testing checklist \\
+\bottomrule
+\end{tabularx}
+\caption{Where to find the raw evidence for this report.}
+\end{table}
+
+\end{document}

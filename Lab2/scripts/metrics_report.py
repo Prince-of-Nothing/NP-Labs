@@ -55,7 +55,7 @@ def svg_bars(title, labels, series, ylabel, path, width=720, height=360, colors=
         y = top + plot_h * i / 4
         v = max_v * (4 - i) / 4
         parts.append(f'<line x1="{left}" y1="{y:.1f}" x2="{left+plot_w}" y2="{y:.1f}" stroke="#eee"/>')
-        parts.append(f'<text x="{left-6}" y="{y+4:.1f}" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">{v:.0f}</text>')
+        parts.append(f'<text x="{left-6}" y="{y+4:.1f}" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">{v:g}</text>')
     for gi, label in enumerate(labels):
         gx = left + gi * group_w
         for si, (name, vals) in enumerate(series):
@@ -83,6 +83,12 @@ def main():
     args = ap.parse_args()
     mdir = os.path.abspath(args.dir)
     server = read_csv(os.path.join(mdir, "server-orders.csv"))
+    # Completion order is not order-id order; sort so the per-order charts read
+    # left to right as 1, 2, 3, ...
+    try:
+        server.sort(key=lambda r: int(r.get("order_id", "0") or 0))
+    except ValueError:
+        pass
     # One CSV per client process (client-orders-<pid>.csv), so several clients
     # can run at the same time; merge them in file-name order.
     client_files = sorted(glob.glob(os.path.join(mdir, "client-orders*.csv")))
