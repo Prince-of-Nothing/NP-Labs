@@ -17,6 +17,10 @@
 \usepackage{microtype}
 \usepackage{caption}
 \usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
 \usepackage{hyperref}
 
 \definecolor{primary}{RGB}{18,52,86}
@@ -93,31 +97,226 @@
 \end{titlepage}
 
 \newpage
+\begin{abstract}
+\noindent
+This report presents the design, implementation, and experimental evaluation of a
+serverless local-network chat built directly on UDP sockets. The system uses one
+program per peer, two sockets per peer (a shared broadcast socket and a unique
+private socket), JSON datagrams, broadcast-based discovery with heartbeats, and
+AES-256-GCM encryption with PBKDF2 key derivation for private messages. Two
+independent implementations, in C\# and Go, interoperate on the wire. The
+evaluation uses three peers on two desktop computers on the same Wi-Fi network.
+All peers discover each other within about one second; general messages reach
+every peer exactly once; private messages reach only their receiver and are
+encrypted on the wire; duplicate names are refused; and invalid, oversized, and
+too-long datagrams are dropped and logged without crashing a peer. The
+experiment also exposes a practical limitation of IPv4 broadcast: a datagram
+sent through the network card does not return to the other sockets on the same
+host. The implementation addresses this by also sending to the loopback
+broadcast address, a design decision that is analysed in the report. The
+results are discussed together with their threats to validity and directions
+for future work.
+\end{abstract}
+
+\noindent\textbf{Keywords:} UDP, broadcast, peer-to-peer, local-area network,
+socket programming, AES-GCM, PBKDF2, network measurement.
+
+\newpage
 \tableofcontents
 \newpage
 
 \section{Introduction}
 
-The goal of this laboratory work is to build a chat for the local network using
-UDP sockets directly. There is no server: every running copy of the program is a
-peer that both sends and receives. A message for the general channel reaches
-everybody with one datagram; a private message goes to one peer only; the last
-task encrypts private messages so that nobody outside the chat can read them.
+\subsection{Motivation and problem statement}
 
-The implementation is written twice, in C\# and in Go, and the two programs
-interoperate. The C\# peer uses the \texttt{Socket} class with
-\texttt{SocketType.Dgram}; the Go peer uses \texttt{net.UDPConn}. No
-\texttt{UdpClient}, no chat or service-discovery library, and no messaging
-framework is used.
+Local-area chat is a compact but demanding distributed-systems problem. It
+combines service discovery without a central directory, group communication,
+unique naming, failure detection, and confidential messaging. A client--server
+design can delegate these concerns to one process; a serverless design must
+solve them among equal peers that may start, stop, or disappear at any time.
+The problem becomes harder because the transport is UDP, which offers a
+connectionless datagram service without delivery, ordering, or duplicate
+suppression guarantees \cite{rfc768}. The application must therefore define its
+own message format, discovery protocol, liveness rules, and security model.
 
-The report describes the protocol, the two-socket design, discovery and
-keep-alive, private messages, encryption, and the two-desktop verification run
-made on 26 November 2026. In that run two Go peers ran on Igor Boltunov's
-CachyOS desktop and one C\# peer ran on Dinu Plesu's Windows desktop, all on the
-same Wi-Fi network, with three peers on two computers. A second local test
-exercised a duplicate name and invalid/oversized datagrams.
+This report studies those mechanisms in a controlled laboratory setting. The
+goal is not to build a feature-rich messenger, but to isolate the minimum
+protocol machinery that makes a local-network chat correct, and to measure how
+it behaves on real hardware.
 
-\section{Architecture and protocol}
+\subsection{Objectives}
+
+The work has six objectives:
+\begin{enumerate}[itemsep=1pt]
+    \item implement one program that acts as a peer, using the UDP socket API
+          directly and no chat, discovery, or messaging library;
+    \item deliver each general-channel message to every peer with one logical
+          datagram, including peers that share a port on the same computer;
+    \item discover peers without a server, enforce unique names, and detect
+          peers that leave or stop responding;
+    \item send a private message to exactly one peer, even when several peers
+          share the public chat port;
+    \item protect private messages with a key derived from a shared passphrase,
+          so that an observer outside the chat cannot read or undetectably
+          modify them;
+    \item provide two interoperable implementations (C\# and Go) and evaluate
+          them on two desktop computers.
+\end{enumerate}
+
+\subsection{Contributions}
+
+The main contributions of this work are:
+\begin{itemize}[itemsep=1pt]
+    \item a two-socket peer architecture that separates the shared general
+          channel from a unique private endpoint;
+    \item a broadcast discovery protocol with immediate \texttt{hello} replies,
+          periodic heartbeats, and a 15-second failure timeout;
+    \item an authenticated-encryption design based on PBKDF2-HMAC-SHA256 and
+          AES-256-GCM with a fresh nonce per message;
+    \item two independent implementations that agree on the wire format and
+          interoperate, including encrypted private messages;
+    \item a two-desktop measurement study that identifies and fixes a practical
+          IPv4 loopback-broadcast limitation for peers on the same host.
+\end{itemize}
+
+\subsection{Organization}
+
+Section~\ref{sec:background} reviews the relevant networking and security
+background. Section~\ref{sec:design} presents the system model and protocol
+design, Section~\ref{sec:implementation} describes the two implementations, and
+Section~\ref{sec:evaluation} reports the experimental evaluation. Section~\ref{sec:design-questions}
+discusses the design questions and control questions, and Section~\ref{sec:conclusion}
+concludes with future work.
+
+\section{Background and Related Work}
+\label{sec:background}
+
+\subsection{UDP and group communication}
+
+UDP exposes a datagram abstraction: each \texttt{sendto} produces one datagram
+that is delivered independently of the others \cite{rfc768}. It does not
+guarantee delivery, ordering, or duplicate suppression, and it does not provide
+connection setup or teardown. These properties are acceptable for a chat that
+values low latency and simplicity, but they shift responsibility for discovery,
+liveness, and message identity to the application.
+
+IPv4 supports two group-communication primitives. Broadcast sends a datagram to
+every host on a subnet, while multicast sends it to a group that hosts join
+\cite{rfc1112}. Broadcast requires no membership protocol, which makes it
+attractive for a small laboratory network, but it is limited to the local subnet
+and is often filtered by Wi-Fi access points. Multicast is more selective and
+can be forwarded by IGMP-aware switches, at the cost of group management.
+Zero-configuration discovery systems such as multicast DNS demonstrate the
+multicast alternative \cite{rfc6762}. This work uses broadcast because the task
+requires a single datagram to reach every peer, and because the laboratory
+network is a single subnet.
+
+\subsection{Peer discovery and failure detection}
+
+A serverless peer must learn the current membership without a directory. The
+classic approach is an announcement protocol: a newcomer broadcasts a
+\texttt{join}, existing peers answer with their identity and endpoint, and every
+peer periodically emits a heartbeat. UDP provides no message identity or
+ordering; these are application-level concepts \cite{lamport}. Failure detection
+is then a timeout problem: a peer is considered gone when no heartbeat has been
+observed for a fixed interval. This is the same trade-off between detection latency and false
+positives that appears in group-membership protocols and in distributed-systems
+textbooks \cite{tanenbaum,kurose}. A short timeout detects failures quickly but
+risks false removals under packet loss; a long timeout is robust but leaves
+stale entries. The chosen values (5-second heartbeats, 15-second timeout) follow
+the laboratory requirement and tolerate two consecutive lost heartbeats.
+
+\subsection{Confidential private messaging}
+
+Confidentiality and integrity for private messages require more than a
+checksum. The design uses PBKDF2-HMAC-SHA256 to derive a 256-bit key from a
+human passphrase \cite{rfc8018}, and AES-256-GCM to encrypt and authenticate
+each message \cite{nistgcm,mcgrew}. GCM is an authenticated-encryption mode: the
+receiver detects both tampering and a wrong key through the authentication tag.
+The nonce must never repeat under the same key, because repetition breaks GCM's
+confidentiality and authenticity guarantees; a fresh random 96-bit nonce is
+therefore generated for every message. A shared passphrase protects the chat
+from an observer outside the group, but it does not distinguish members inside
+the group: anyone who knows the passphrase can decrypt every private message.
+Per-pair keys would require an authenticated key exchange, which is outside the
+scope of the laboratory task.
+
+\subsection{Positioning of this work}
+
+The implementation is intentionally small and pedagogical. It does not attempt
+to replace mature messaging systems or to provide end-to-end secrecy against
+group members. Its value is in making the protocol mechanisms explicit and
+measurable: the wire format, the discovery state machine, the socket-level
+broadcast behaviour, the encryption parameters, and the failure modes are all
+visible in the source and in the captured logs. The two-language requirement
+also provides a compatibility check that a single implementation cannot offer.
+
+\section{System Design}
+\label{sec:design}
+
+\subsection{System model and notation}
+
+Let $P=\{p_1,\ldots,p_n\}$ be the set of peers currently in the chat. Each peer
+$p$ has a public endpoint $e_p=(\mathrm{IP}_p,\mathrm{port}_{\mathrm{chat}})$
+and a private endpoint $\pi_p=(\mathrm{IP}_p,\mathrm{port}_p)$, where
+$\mathrm{port}_p$ is an ephemeral port unique to that peer. The general channel
+is a broadcast relation $G\subseteq P\times M$: a message $m\in M$ is sent once
+to the public endpoint and is received by every peer in $P$. The private
+channel is a unicast relation $U\subseteq P\times P\times M$: a message is sent
+only to $\pi_q$ for one receiver $q\in P$.
+
+The liveness rule is a timeout on the heartbeat interval $T_{\mathrm{hb}}$.
+With heartbeats every $T_{\mathrm{hb}}=5$~s and a removal threshold
+$T_{\mathrm{gone}}=15$~s, a peer tolerates two consecutive lost heartbeats:
+\begin{equation}
+T_{\mathrm{gone}} = 3\,T_{\mathrm{hb}}.
+\label{eq:timeout}
+\end{equation}
+
+For confidentiality, let $L_p$ be the plaintext length in bytes. AES-GCM adds a
+12-byte nonce and a 16-byte authentication tag, and the JSON transport encodes
+the binary fields in base64, which expands them by a factor of about $4/3$:
+\begin{equation}
+L_{\mathrm{wire}} \approx \frac{4}{3}\left(L_p + 12 + 16\right) + L_{\mathrm{hdr}},
+\label{eq:overhead}
+\end{equation}
+where $L_{\mathrm{hdr}}$ is the JSON header. The 500-character limit therefore
+keeps every datagram well below the IPv4 UDP limit and below the path MTU
+\cite{rfc768}.
+
+The nonce is a fresh 96-bit random value for every message. For $n$ messages
+under one key, the birthday bound gives an upper bound on the probability of at
+least one nonce collision:
+\begin{equation}
+P_{\mathrm{collision}} \;\le\; \frac{n(n-1)}{2\cdot 2^{96}}.
+\label{eq:birthday}
+\end{equation}
+For the message volumes of a laboratory chat this probability is negligible,
+which is why a random nonce is acceptable in this design.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  peer/.style={draw, rounded corners, fill=blue!5, minimum width=2.7cm,
+               minimum height=1.1cm, align=center},
+  link/.style={thick, <->},
+  priv/.style={thick, dashed, <->},
+  node distance=2.4cm
+]
+\node[peer] (alice) {Alice\\Go peer};
+\node[peer, right=of alice] (bob) {Bob\\Go peer};
+\node[peer, below=1.6cm of bob] (cara) {Cara\\C\# peer};
+\node[draw, dashed, rounded corners, above=1.0cm of bob, minimum width=6.2cm,
+      align=center, fill=gray!5] (lan)
+      {Wi-Fi LAN 192.168.1.0/24\\chat port 25565/UDP};
+\draw[link] (alice) -- node[above, font=\scriptsize]{broadcast} (bob);
+\draw[link] (bob) -- node[right, font=\scriptsize]{broadcast} (cara);
+\draw[priv] (alice) -- node[below left, font=\scriptsize]{private} (cara);
+\end{tikzpicture}
+\caption{Two-socket peer design. The public socket carries discovery and the
+general channel; the private socket carries encrypted unicast messages.}
+\label{fig:architecture}
+\end{figure}
 
 \subsection{One program, two sockets}
 
@@ -209,12 +408,13 @@ multi-homed.
 \subsection{Encryption}
 
 All peers of a chat receive the same passphrase as a command-line parameter.
-Each peer derives a 32-byte key with PBKDF2-HMAC-SHA256, 100\,000 iterations
-and a 16-byte zero salt. Every private message uses AES-256-GCM with a fresh
-random 12-byte nonce from the OS CSPRNG. The nonce, the 16-byte authentication
-tag and the ciphertext are sent base64-encoded in the JSON datagram. The
-receiver decrypts and authenticates the message; a wrong passphrase or a
-modified ciphertext fails the GCM check and the message is dropped.
+Each peer derives a 32-byte key with PBKDF2-HMAC-SHA256 \cite{rfc8018},
+100\,000 iterations and a 16-byte zero salt. Every private message uses
+AES-256-GCM \cite{nistgcm,mcgrew} with a fresh random 12-byte nonce from the OS
+CSPRNG. The nonce, the 16-byte authentication tag and the ciphertext are sent
+base64-encoded in the JSON datagram. The receiver decrypts and authenticates the
+message; a wrong passphrase or a modified ciphertext fails the GCM check and the
+message is dropped.
 
 The general channel is not encrypted, as the task specifies.
 
@@ -230,6 +430,7 @@ bytes are logged as \texttt{DROP} and ignored. The chat never crashes because of
 a datagram from another program.
 
 \section{Implementation}
+\label{sec:implementation}
 
 \subsection{C\# peer}
 
@@ -274,7 +475,42 @@ After the fix, all three peers discovered each other, the two local peers
 received the general channel, and the Windows peer exchanged encrypted private
 messages with both Linux peers.
 
-\section{Testing and results}
+\section{Experimental Evaluation}
+\label{sec:evaluation}
+
+\subsection{Methodology}
+
+The evaluation follows a controlled single-case study. The case is a chat with
+three peers on two desktop computers on the same Wi-Fi subnet. The study is
+guided by four research questions:
+\begin{description}[style=nextline,leftmargin=0pt,itemsep=1pt]
+    \item[RQ1.] Does broadcast discovery converge quickly enough for a peer to
+    see the complete membership within the one-second target?
+    \item[RQ2.] Does the two-socket design deliver a private message to exactly
+    one peer when several peers share the public chat port?
+    \item[RQ3.] Do the C\# and Go implementations interoperate, including
+    authenticated private messages?
+    \item[RQ4.] Does the implementation reject malformed, oversized, and
+    duplicate-name traffic without crashing?
+\end{description}
+
+The procedure is:
+\begin{enumerate}[itemsep=1pt]
+    \item build both implementations from a clean checkout;
+    \item start the two Go peers on the Linux desktop and the C\# peer on the
+          Windows desktop, all on the same UDP port;
+    \item exercise discovery, the general channel, \texttt{/users}, private
+          messages in both directions, and \texttt{/quit};
+    \item run separate duplicate-name and invalid-datagram tests;
+    \item record the console output and the per-datagram log on every peer, and
+          compare the observed behaviour with the expected behaviour in
+          Table~\ref{tab:checks}.
+\end{enumerate}
+
+The unit of analysis is the datagram log line and the console event, not a
+synthetic benchmark. This is appropriate for a protocol-correctness study, but
+it limits the statistical strength of the conclusions; the threats are
+discussed in Section~\ref{sec:threats}.
 
 \subsection{Environment}
 
@@ -420,9 +656,78 @@ C\# and Go peers interoperate (general and encrypted private) & pass \\
 \bottomrule
 \end{tabularx}
 \caption{Results of the two-desktop Lab 3 run.}
+\label{tab:checks}
 \end{table}
 
-\section{Answers to the defense questions}
+\subsection{Discussion}
+
+The results support the four research questions. Discovery converged within the
+one-second target, the two-socket design kept private traffic on the intended
+endpoint, authenticated encryption interoperated across two languages, and
+malformed traffic was rejected without affecting the peers. Three observations
+deserve emphasis.
+
+First, the local-peer broadcast behaviour is a host-stack property rather than a
+protocol property. IPv4 broadcast is defined as a network operation
+\cite{rfc1112}, but an outgoing broadcast is not looped back to the other
+sockets on the same host by every stack. The first run therefore failed even
+though the wire format and the discovery state machine were correct. Sending an
+additional copy to \texttt{127.255.255.255} restores the expected local fan-out;
+the duplicate copies are then suppressed by the \texttt{from:id} rule, so the
+application-level semantics remain one logical message. This is a useful lesson
+for protocol designers: a specification that is correct on the wire can still
+fail on a multi-homed host. It is also an application-level compensation for a
+local-stack behaviour, in the spirit of the end-to-end argument \cite{saltzer}.
+
+Second, the environment is part of the experiment. The Linux desktop runs UFW
+with a default-deny input policy. Port 9000/UDP was therefore not reachable even
+though the peers were bound correctly. The protocol is port-independent, so the
+second run used 25565/UDP, which the host already allowed. Reproducibility
+requires recording such host-level configuration, not only the source code and
+the command line.
+
+Third, the design makes explicit trade-offs. Broadcast is simpler than multicast
+but is confined to one subnet and may be filtered by access points. A shared
+passphrase protects the group from an outside observer but not from a member who
+knows the passphrase; per-pair keys would require an authenticated key exchange.
+The absence of acknowledgements keeps the protocol small but means that a lost
+private datagram is simply lost. These choices are appropriate for the
+laboratory task and are stated here rather than hidden behind the implementation.
+
+\subsection{Threats to validity}
+\label{sec:threats}
+
+\textbf{Construct validity.} Success is measured through console transcripts and
+datagram logs, not through an independent packet capture or a formal
+specification. Encryption correctness is inferred from successful decryption and
+from the presence of ciphertext in the log; no cryptanalysis is performed.
+
+\textbf{Internal validity.} The two desktops have independent clocks, so
+cross-machine timestamps are indicative rather than exact. Each scenario was run
+once; the duplicate-name and invalid-datagram tests were separate runs. The
+loopback-broadcast fix and the UFW port change were introduced between the first
+and second attempts, which is why the report distinguishes the exploratory run
+from the final run.
+
+\textbf{External validity.} The evaluation covers one Wi-Fi access point, two
+desktops, three peers, and two implementations. Broadcast delivery depends on
+access-point configuration such as client isolation; other operating systems and
+mobile devices were not part of the final two-desktop run. The results should
+therefore be read as a protocol study, not as a performance claim for arbitrary
+LANs.
+
+\textbf{Conclusion validity.} The sample is small and the study reports
+descriptive observations rather than confidence intervals. No packet-loss
+injection or adversarial testing was performed. The conclusions are limited to
+the mechanisms that were actually exercised.
+
+\section{Discussion of Design Questions}
+\label{sec:design-questions}
+
+This section connects the implementation to the questions that arise in a
+technical defense: why the sockets are bound as they are, how discovery and
+liveness work, how private messages are isolated, and what the encryption
+protects. The answers are grouped by task.
 
 \subsection*{Task 1}
 
@@ -548,7 +853,8 @@ It detects accidental corruption in transit. It is not a cryptographic MAC: an
 attacker who changes the payload can recompute the checksum. AES-GCM's tag
 provides integrity and authenticity against anyone without the key.
 
-\section{Conclusion}
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
 
 The chat meets all four tasks and the two-language bonus. It uses raw UDP
 sockets, one program per peer, two sockets per peer, broadcast discovery with
@@ -561,15 +867,82 @@ the network card does not return to the other sockets on the same computer, so
 the implementation now also sends to the loopback broadcast address. Invalid
 and oversized datagrams are dropped and logged without crashing the chat.
 
-\begin{thebibliography}{9}
-\bibitem{task} Laboratory Work 3: A Local Network Chat, Network Programming,
-Technical University of Moldova, 2026.
-\bibitem{repo} NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
+Several directions remain for future work. A multicast implementation with
+IGMP membership would avoid subnet-wide broadcast and could be compared with the
+broadcast version on the same testbed. Per-pair keys obtained through an
+authenticated Diffie--Hellman exchange would protect private messages from other
+chat members, not only from outside observers. Application-level acknowledgements
+and bounded retransmission would turn the private channel into a reliable one,
+at the cost of additional state. Finally, a larger and more diverse evaluation
+with packet-loss injection, multiple access points, and mobile devices would
+strengthen the external validity of the measurements.
+
+\section*{Data availability}
+
+The source code, raw console transcripts, datagram logs, and the LaTeX source of
+this report are available in the NP-Labs repository
+\cite{repo}. The exact files used for the results are listed in
+Appendix~\ref{app:evidence}.
+
+\begin{thebibliography}{99}
+
+\bibitem{rfc768}
+J. Postel, ``User Datagram Protocol,'' RFC 768, Internet Engineering Task
+Force, Aug. 1980.
+
+\bibitem{rfc1112}
+S. E. Deering, ``Host Extensions for IP Multicasting,'' RFC 1112, Internet
+Engineering Task Force, Aug. 1989.
+
+\bibitem{rfc6762}
+S. Cheshire and M. Krochmal, ``Multicast DNS,'' RFC 6762, Internet Engineering
+Task Force, Feb. 2013.
+
+\bibitem{rfc8018}
+K. Moriarty, B. Kaliski, and A. Rusch, ``PKCS \#5: Password-Based Cryptography
+Specification Version 2.2,'' RFC 8018, Internet Engineering Task Force,
+Jan. 2017.
+
+\bibitem{nistgcm}
+M. Dworkin, ``Recommendation for Block Cipher Modes of Operation:
+Galois/Counter Mode (GCM) and GMAC,'' NIST Special Publication 800-38D,
+National Institute of Standards and Technology, 2007.
+
+\bibitem{mcgrew}
+D. A. McGrew and J. Viega, ``The Galois/Counter Mode of Operation (GCM),''
+Technical report, Cisco Systems and University of California, Berkeley, 2004.
+
+\bibitem{tanenbaum}
+A. S. Tanenbaum and M. van Steen, \emph{Distributed Systems}, 4th ed.
+Maarten van Steen, 2023.
+
+\bibitem{kurose}
+J. F. Kurose and K. W. Ross, \emph{Computer Networking: A Top-Down Approach},
+8th ed. Pearson, 2021.
+
+\bibitem{lamport}
+L. Lamport, ``Time, Clocks, and the Ordering of Events in a Distributed
+System,'' \emph{Communications of the ACM}, vol. 21, no. 7, pp. 558--565, 1978.
+
+\bibitem{saltzer}
+J. H. Saltzer, D. P. Reed, and D. D. Clark, ``End-to-End Arguments in System
+Design,'' \emph{ACM Transactions on Computer Systems}, vol. 2, no. 4,
+pp. 277--288, 1984.
+
+\bibitem{task}
+Laboratory Work 3: A Local Network Chat, Network Programming, Technical
+University of Moldova, 2026.
+
+\bibitem{repo}
+NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
 branch \texttt{final/labs-2-3-4-2026-11-26}.
-\bibitem{knowledge} NP-Labs, \texttt{Lab3/KNOWLEDGE.md} and
-\texttt{Lab3/README.md}.
-\bibitem{evidence} NP-Labs,
-\texttt{Lab3/evidence/two-desktop-2026-11-26/}.
+
+\bibitem{knowledge}
+NP-Labs, \texttt{Lab3/KNOWLEDGE.md} and \texttt{Lab3/README.md}.
+
+\bibitem{evidence}
+NP-Labs, \texttt{Lab3/evidence/two-desktop-2026-11-26/}.
+
 \end{thebibliography}
 
 \appendix
@@ -587,6 +960,7 @@ go build -o lab3-chat .
 
 \clearpage
 \section{Evidence map}
+\label{app:evidence}
 
 \begin{table}[!ht]
 \centering

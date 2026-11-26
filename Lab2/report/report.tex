@@ -17,6 +17,10 @@
 \usepackage{microtype}
 \usepackage{caption}
 \usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
 \usepackage{hyperref}
 
 \definecolor{primary}{RGB}{18,52,86}
@@ -116,45 +120,224 @@
 \end{titlepage}
 
 \newpage
+\begin{abstract}
+\noindent
+This report presents the design, implementation, and experimental evaluation of
+a concurrent coffee-shop server built directly on TCP sockets. The server
+accepts persistent client connections, takes products from a shared stock,
+prepares orders with one worker per logical processor, and notifies each client
+when its order is ready. A provider role replenishes the stock, low-stock
+conditions trigger immediate alerts, client disconnections cancel and refund
+queued or in-progress orders, and the stock is persisted atomically across
+server restarts. Three implementations are provided in C\#, Go, and Rust, and
+the C\# and Go servers are exercised both with an Android phone and with a
+second desktop computer. In the main two-desktop run, 16 concurrent Go clients
+against 12 workers produced 16 accepted and 16 ready orders, with an average
+queue wait of 1048.5~ms and a maximum of 4194.4~ms; five C\# clients measured an
+average acceptance latency of 9.0~ms. The report formalises the order and
+worker model, analyses the concurrency and failure-handling design, and
+discusses the results together with their threats to validity and directions
+for future work.
+\end{abstract}
+
+\noindent\textbf{Keywords:} TCP sockets, concurrency, producer--consumer,
+worker pool, shared state, race conditions, failure handling, performance
+measurement.
+
+\newpage
 \tableofcontents
 \newpage
 
 \section{Introduction}
 
-The goal of this laboratory work is to build the server of a coffee shop using
-TCP sockets directly. Clients order products over a persistent TCP connection,
-the server takes the products from a shared stock, prepares the orders with a
-fixed number of workers, and tells each client when its order is ready. A
-provider connection can add products, and the server has to keep working when a
-client or the provider disappears.
+\subsection{Motivation and problem statement}
 
-The implementation follows the task requirements literally:
+A concurrent TCP server is a compact testbed for three classic systems
+problems: framing a byte stream into messages, coordinating producers and
+consumers through a shared queue, and protecting shared mutable state from race
+conditions. TCP provides a reliable, ordered byte stream, but it does not
+preserve message boundaries \cite{rfc9293}. The application must therefore
+define its own framing, validation, and error handling. When several client
+threads and several worker threads share a stock, the correctness of the last
+item depends on a critical section, not on timing. When a client disappears,
+the server must reclaim the resources and products associated with its orders
+without stopping the other clients.
 
-\begin{itemize}[itemsep=2pt]
-    \item the socket API is used directly (\texttt{Socket}, \texttt{Bind},
-          \texttt{Listen}, \texttt{Accept}, \texttt{Receive}, \texttt{Send});
-    \item three roles: \textbf{server}, \textbf{client} and \textbf{provider}
-          (the last two are one interactive program started in either role);
-    \item server port and client/provider host and port are command-line
-          arguments;
-    \item one worker per logical processor, a FIFO queue, one whole order per
-          worker;
-    \item the shared stock is protected against races;
-    \item the server logs every connection, order, delivery and error;
-    \item everything is in the Git repository
-          \url{https://github.com/Prince-of-Nothing/NP-Labs}.
+The coffee-shop server in this laboratory exercises exactly these concerns. It
+has three roles (server, client, provider), a fixed worker pool, a shared stock,
+a provider that replenishes the stock, and failure handling for clients and the
+provider. The task also offers three bonuses: two computers, two programming
+languages, and a stock that survives a restart. All three are implemented.
+
+\subsection{Objectives}
+
+The objectives are:
+\begin{enumerate}[itemsep=1pt]
+    \item implement a TCP server that accepts many clients and a provider using
+          the socket API directly, without \texttt{TcpListener}, \texttt{TcpClient},
+          or \texttt{NetworkStream};
+    \item implement the menu, order, refusal, preparation, and ready
+          notification semantics of the coffee shop;
+    \item create one worker per logical processor, a FIFO order queue, and a
+          stock protected against concurrent access;
+    \item alert the provider when a product falls below five units, including
+          on provider reconnect;
+    \item cancel and refund the orders of a client that disappears, while
+          keeping the server available to the others;
+    \item persist the stock across a restart and evaluate the server on two
+          computers and in two languages.
+\end{enumerate}
+
+\subsection{Contributions}
+
+The main contributions of this work are:
+\begin{itemize}[itemsep=1pt]
+    \item a direct-socket TCP server with newline-delimited JSON framing,
+          bounded message validation, and per-session write serialisation;
+    \item a worker-pool design with a FIFO queue and a lock that makes the
+          stock check and decrement one atomic critical section;
+    \item a disconnect protocol that cancels queued and in-progress orders,
+          claims each order exactly once, and returns its products to the stock;
+    \item atomic stock persistence in the C\# and Go servers;
+    \item automatic server and per-process client metrics, and a two-desktop
+          evaluation with 16 concurrent Go clients and five C\# clients.
 \end{itemize}
 
-The repository contains three implementations of the same protocol: \textbf{C\#}
-(primary, .NET 10), \textbf{Go} and \textbf{Rust}. The C\# and Go versions were
-also exercised between two computers: first the server on Windows and the
-clients on an Android phone, then the server on Windows and the clients on a
-CachyOS desktop. The two-desktop run was done together with Igor Boltunov
-(FAF-241), who provided the CachyOS desktop. The three optional bonuses are
-covered: two computers, two programming languages working together, and a stock
-that survives a server restart.
+\subsection{Organization}
 
-\section{Architecture and protocol}
+Section~\ref{sec:background} reviews TCP, producer--consumer systems, shared-state
+synchronisation, and the performance metrics used later. Section~\ref{sec:design}
+presents the system model and protocol design, Section~\ref{sec:evaluation}
+reports the experimental evaluation, Section~\ref{sec:design-questions} discusses
+the design and control questions, and Section~\ref{sec:conclusion} concludes with
+future work.
+
+\section{Background and Related Work}
+\label{sec:background}
+
+\subsection{TCP and socket programming}
+
+TCP provides a reliable, ordered byte stream between two endpoints
+\cite{rfc9293}. It handles retransmission, flow control, and connection setup,
+but it does not preserve application message boundaries. A server that reads
+from a TCP socket may receive half a message, two messages, or a partial message
+followed by the rest of the first. The application must buffer bytes, find a
+delimiter or length prefix, and validate the result. This work uses
+newline-delimited JSON: each message is one JSON object followed by a newline,
+and a line longer than 4096 bytes is rejected before parsing.
+
+The socket API exposes the sequence \texttt{socket}, \texttt{bind},
+\texttt{listen}, \texttt{accept}, \texttt{send}, \texttt{receive}, and
+\texttt{close}. The listening socket is not used for data; each accepted
+connection gets its own socket and its own reader thread. This thread-per-connection
+model is simple and direct, but it costs a thread stack and a context switch per
+client, a trade-off discussed in Section~\ref{sec:design-questions}.
+
+\subsection{Producer--consumer systems and worker pools}
+
+The server is a producer--consumer system. Connection threads are the
+producers: they validate an order, take its products from the stock, and put the
+order in a queue. Workers are the consumers: they take the oldest order and
+simulate its preparation. This pattern decouples request handling from the
+duration of the work and is a standard operating-systems example
+\cite{silberschatz}. A fixed worker pool bounds the number of orders prepared at
+the same time; a FIFO queue preserves arrival order when all workers are busy.
+
+\subsection{Shared state and race conditions}
+
+The stock is shared mutable state. A check-then-decrement sequence is not atomic
+by default: two threads can both observe the last item and both accept an order
+\cite{herlihy}. The server therefore performs the stock check and the decrement
+inside one critical section protected by a lock. The same reasoning applies to
+the order identifier counter, the session list, the provider list, and the
+metrics counters. A second form of shared state is the connection itself:
+reader threads, workers, and alert senders may write to the same session, so
+every session has a write lock and every message is one complete line.
+
+\subsection{Performance metrics and queueing}
+
+The evaluation uses queue wait, preparation time, throughput, and per-worker
+utilisation. Little's law relates the average number of items in a system to the
+arrival rate and the average time in the system, $L=\lambda W$ \cite{little},
+and provides a sanity check on the queue measurements. Amdahl's law bounds the
+speedup from adding workers when part of the work is serial
+\cite{amdahl}. In this laboratory the preparation is simulated by waiting, so
+the workers are mostly idle from the CPU's point of view; the measurements
+therefore describe scheduling and queueing behaviour rather than CPU-bound
+parallel speedup. This distinction is important for interpreting the results.
+
+\subsection{Positioning of this work}
+
+The implementation is deliberately small and direct. It does not use an
+asynchronous event loop, a thread pool library, or a web framework; those
+choices would hide the socket and concurrency mechanisms that the laboratory
+asks students to understand. The three implementations (C\#, Go, Rust) share a
+wire protocol and provide a compatibility check across runtimes, while the
+metrics files make the evaluation reproducible.
+
+\section{System Design}
+\label{sec:design}
+
+\subsection{System model and notation}
+
+Let $O$ be the set of orders. An order $o\in O$ is a multiset of products with
+quantities $q_{o,i}$ for product $i$. Each product has a fixed preparation time
+per unit, $p_i$: coffee 4~s, tea 3~s, croissant 2~s. The expected preparation
+time of an order is:
+\begin{equation}
+T_{\mathrm{prep}}(o) = \sum_{i\in o} q_{o,i}\,p_i.
+\label{eq:prep}
+\end{equation}
+An order is accepted only if the stock $s_i$ satisfies $s_i\ge q_{o,i}$ for every
+product, and the check and the decrement are one critical section:
+\begin{equation}
+\text{accept}(o) \iff \forall i:\; s_i \ge q_{o,i},
+\qquad
+s_i \leftarrow s_i - q_{o,i}.
+\label{eq:stock}
+\end{equation}
+
+With $W$ workers, a FIFO queue, and $N$ accepted orders, the throughput is
+\begin{equation}
+X = \frac{N_{\mathrm{ready}}}{T_{\mathrm{run}}},
+\label{eq:throughput}
+\end{equation}
+and the utilisation of worker $w$ is
+\begin{equation}
+U_w = \frac{B_w}{T_{\mathrm{run}}},
+\label{eq:util}
+\end{equation}
+where $B_w$ is the time that worker $w$ spent preparing orders. These are the
+quantities reported by the server metrics.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.6cm,
+  box/.style={draw, rounded corners, minimum width=2.5cm, minimum height=1.0cm,
+              align=center, fill=blue!5},
+  server/.style={draw, rounded corners, minimum width=4.0cm, minimum height=2.8cm,
+                 align=center, fill=orange!8},
+  arrow/.style={-{Latex[length=2mm]}, thick}
+]
+\node[box] (c1) {Client 1\\TCP session};
+\node[box, below=0.4cm of c1] (c2) {Client $n$\\TCP session};
+\node[box, below=0.4cm of c2] (prov) {Provider\\TCP session};
+\node[server, right=2.0cm of c2] (srv)
+  {Server\\[2pt]listening socket\\stock (lock)\\order queue\\worker pool};
+\node[box, right=2.0cm of srv, yshift=0.7cm] (ready) {Ready\\notifications};
+\node[box, right=2.0cm of srv, yshift=-0.7cm] (alerts) {Low-stock\\alerts};
+\draw[arrow] (c1.east) -- (srv.west);
+\draw[arrow] (c2.east) -- (srv.west);
+\draw[arrow] (prov.east) -- (srv.west);
+\draw[arrow] (srv.east) -- (ready.west);
+\draw[arrow] (srv.east) -- (alerts.west);
+\end{tikzpicture}
+\caption{Server model. The listening socket creates one session per connection;
+the shared stock and the FIFO order queue are protected by locks, and the worker
+pool consumes orders and sends ready notifications.}
+\label{fig:server-model}
+\end{figure}
 
 \subsection{Roles and sockets}
 
@@ -312,7 +495,46 @@ The bonus is implemented in both the C\# and the Go server. A corrupt file is
 rejected, not partially applied, and the server starts with a random stock
 instead.
 
-\section{Testing and results}
+\section{Experimental Evaluation}
+\label{sec:evaluation}
+
+\subsection{Methodology}
+
+The evaluation is a set of controlled experiments on the same protocol. The
+research questions are:
+\begin{description}[style=nextline,leftmargin=0pt,itemsep=1pt]
+    \item[RQ1.] Does the server implement the menu, order, refusal, preparation,
+    and ready semantics correctly, including invalid input?
+    \item[RQ2.] With more clients than workers, are all orders accepted and
+    eventually ready, and is the queueing visible in the metrics?
+    \item[RQ3.] Does the stock lock prevent two clients from taking the last
+    item?
+    \item[RQ4.] Does a client disconnect cancel and refund its queued or
+    in-progress orders without affecting the others?
+    \item[RQ5.] Do the provider alerts and stock persistence behave as
+    required?
+    \item[RQ6.] Does the protocol work across two computers and two languages?
+\end{description}
+
+The procedure is:
+\begin{enumerate}[itemsep=1pt]
+    \item build the C\#, Go, and Rust implementations from a clean checkout;
+    \item start a fresh C\# server with a random stock and a known worker count;
+    \item exercise one client, invalid input, the last-item race, the provider,
+          alerts, and a client disconnect;
+    \item run 16 Go clients and a provider on the second desktop, with the
+          server metrics enabled;
+    \item run five C\# clients on the server desktop to obtain client-side
+          latency metrics;
+    \item stop and restart the server to verify stock persistence;
+    \item parse the server CSV/JSON and the client CSVs, and generate the
+          tables and charts with the repository script.
+\end{enumerate}
+
+The unit of analysis is one finished order row and one client transcript line.
+The measurements are descriptive: the study reports averages and maxima, not
+confidence intervals, and the limitations of that choice are stated in
+Section~\ref{sec:threats}.
 
 \subsection{Environment}
 
@@ -542,7 +764,66 @@ the 4 queued orders were cancelled when their clients left, and the server
 returned their products to the stock and logged each refund. This is the
 Task~4 behaviour with real cross-device clients.
 
-\section{Answers to the control questions}
+\subsection{Discussion}
+
+The results support the six research questions. The single-client and invalid-input
+tests show that the protocol is framed and validated correctly. The 16-client run
+shows the expected FIFO behaviour: 12 orders started immediately, four waited,
+and all 16 eventually became ready. The five-client run shows the no-queue case,
+where the acceptance latency is dominated by the network round trip rather than
+by the server. The last-item race produced exactly one acceptance and one
+refusal, which is the observable consequence of the \texttt{StockLock} critical
+section. The disconnect run cancelled and refunded four queued orders without
+affecting the 12 ready orders, and the restart tests show that the stock and the
+identifier sequence survive a process restart.
+
+The queue measurements are consistent with Little's law \cite{little}: with a
+throughput of about 0.44 orders/s and an average queue wait of about 1.05 s,
+the average number of waiting orders is roughly 0.46, which is plausible for a
+short burst of four queued orders that drain over time. The per-worker
+utilisation is low (about 12--23\%) because preparation is simulated by sleeping;
+the workers are not CPU-bound. Amdahl's law \cite{amdahl} therefore does not
+describe this workload directly: the capacity limit is the fixed number of
+workers, not the number of cores available for computation. This is an
+important distinction when reading the utilisation numbers.
+
+The design also exposes a deliberate admission-control choice. The order queue
+is unbounded, so a producer never blocks; the stock is the real admission
+control. A client cannot create an unbounded number of accepted orders because
+each accepted order consumes stock, and the stock is finite until the provider
+delivers more. If the provider is disconnected, the shop continues with the
+stock it has, which is the required behaviour.
+
+\subsection{Threats to validity}
+\label{sec:threats}
+
+\textbf{Construct validity.} Preparation time is simulated by waiting, so the
+metrics describe scheduling and queueing, not CPU-bound work. Client-side
+latency is available only for the C\# clients; the Go clients write transcripts
+but no CSV metrics. The server metrics are the common measurement for both
+languages.
+
+\textbf{Internal validity.} The phone run and the two-desktop run used different
+networks and client machines, so their absolute latencies are not directly
+comparable. The two desktops have independent clocks, and the server timestamps
+use the server clock. Each scenario was run once; the maximum queue wait is
+sensitive to scheduling and to when the clients were started.
+
+\textbf{External validity.} The evaluation covers one LAN, 16 concurrent clients,
+12 workers, and three implementations. It does not cover a WAN, 1000 clients, or
+a CPU-bound preparation. The results should be read as a validation of the
+protocol and concurrency design, not as a capacity claim for arbitrary hardware.
+
+\textbf{Conclusion validity.} The analysis is descriptive; no confidence
+intervals or repeated trials are reported. The last-item race, disconnect, and
+persistence tests are single controlled runs. The conclusions are limited to the
+behaviours that were actually observed.
+
+\section{Discussion of Design Questions}
+\label{sec:design-questions}
+
+This section connects the implementation to the control questions and discusses
+the design choices behind the server.
 
 \begin{description}[style=nextline,leftmargin=0pt,itemsep=3pt]
     \item[1. Listening socket versus accepted sockets.]
@@ -637,7 +918,8 @@ Task~4 behaviour with real cross-device clients.
     pressed Enter.
 \end{description}
 
-\section{Conclusion}
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
 
 The coffee shop server meets all four tasks and the three optional bonuses. The
 direct socket implementation handles framing, many concurrent clients, a shared
@@ -650,13 +932,64 @@ Windows and Go on a CachyOS desktop; the stock-persistence bonus works in both
 server implementations. The metrics files make the report reproducible: the
 same CSV/JSON files generate the tables and charts after any run.
 
-\begin{thebibliography}{9}
-\bibitem{task} Laboratory Work 2: A Coffee Shop Server, Network Programming,
-Technical University of Moldova, 2026.
-\bibitem{repo} NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
+Future work includes an asynchronous or event-driven server model to avoid the
+per-connection thread cost \cite{kleppmann}; a bounded queue with backpressure
+instead of relying only on the stock as admission control; richer per-order
+tracing and latency histograms; a larger evaluation with more clients, repeated
+runs, and confidence intervals; and a secure deployment with TLS and
+authenticated clients. The stock persistence could be extended to persist
+queued orders and to recover them after a crash, which would turn the current
+best-effort in-memory queue into a durable one.
+
+\section*{Data availability}
+
+The source code, raw server and client metrics, console transcripts, and the
+LaTeX source of this report are available in the NP-Labs repository
+\cite{repo}. The exact files used for the results are listed in
+Appendix~\ref{app:evidence}.
+
+\begin{thebibliography}{99}
+
+\bibitem{rfc9293}
+W. Eddy, Ed., ``Transmission Control Protocol (TCP),'' RFC 9293, Internet
+Engineering Task Force, Aug. 2022.
+
+\bibitem{silberschatz}
+A. Silberschatz, P. B. Galvin, and G. Gagne, \emph{Operating System Concepts},
+10th ed. Hoboken, NJ: Wiley, 2018.
+
+\bibitem{herlihy}
+M. Herlihy and N. Shavit, \emph{The Art of Multiprocessor Programming}, 2nd ed.
+Cambridge, MA: Morgan Kaufmann, 2020.
+
+\bibitem{little}
+J. D. C. Little, ``A Proof for the Queuing Formula: $L=\lambda W$,''
+\emph{Operations Research}, vol. 9, no. 3, pp. 383--387, 1961.
+
+\bibitem{amdahl}
+G. M. Amdahl, ``Validity of the Single Processor Approach to Achieving Large
+Scale Computing Capabilities,'' in \emph{Proceedings of the AFIPS Spring Joint
+Computer Conference}, 1967, pp. 483--485.
+
+\bibitem{kleppmann}
+M. Kleppmann, \emph{Designing Data-Intensive Applications}. Sebastopol, CA:
+O'Reilly Media, 2017.
+
+\bibitem{task}
+Laboratory Work 2: A Coffee Shop Server, Network Programming, Technical
+University of Moldova, 2026.
+
+\bibitem{repo}
+NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
 branch \texttt{final/labs-2-3-4-2026-11-26}.
-\bibitem{knowledge} NP-Labs, \texttt{Lab2/KNOWLEDGE.md} and
-\texttt{Lab2/README.md}.
+
+\bibitem{knowledge}
+NP-Labs, \texttt{Lab2/KNOWLEDGE.md} and \texttt{Lab2/README.md}.
+
+\bibitem{evidence}
+NP-Labs, \texttt{Lab2/evidence/two-desktop-2026-11-26/} and
+\texttt{Lab2/evidence/stock-persistence-2026-11-26/}.
+
 \end{thebibliography}
 
 \appendix
@@ -678,6 +1011,7 @@ binaries, under \texttt{dist/}.
 
 \clearpage
 \section{Evidence map}
+\label{app:evidence}
 
 \begin{table}[!ht]
 \centering
