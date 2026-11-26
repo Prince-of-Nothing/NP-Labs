@@ -1,0 +1,170 @@
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://[::]:5000
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\Dinusauuuur\AppData\Local\Temp\opencode\lab4-grpc-final
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Subscribe - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Subscribe'
+[05:49:57.815] DeliveryLoop started
+[05:49:57.817] Subscriber added topic=grades
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Subscribe - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Subscribe'
+[05:50:00.088] Subscriber added topic=grades
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:05.752] Delivered id=1 topic=grades
+[05:50:05.752] Delivered id=1 topic=grades
+[05:50:05.779] Publish id=1 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 48.6179ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:05.811] Delivered id=2 topic=grades
+[05:50:05.811] Delivered id=2 topic=grades
+[05:50:05.814] Publish id=2 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 5.7989ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:05.819] Delivered id=3 topic=grades
+[05:50:05.820] Delivered id=3 topic=grades
+[05:50:05.821] Publish id=3 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 3.8305ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:05.826] Delivered id=4 topic=grades
+[05:50:05.826] Delivered id=4 topic=grades
+[05:50:05.827] Publish id=4 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 1.6419ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:05.832] Delivered id=5 topic=grades
+[05:50:05.832] Delivered id=5 topic=grades
+[05:50:05.833] Publish id=5 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 1.8329ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:07.640] Delivered id=6 topic=grades
+[05:50:07.640] Delivered id=6 topic=grades
+[05:50:07.641] Publish id=6 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 2.9552ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+[05:50:07.920] Delivered id=7 topic=grades
+[05:50:07.921] Delivered id=7 topic=grades
+[05:50:07.922] Publish id=7 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 2.3392ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:08.227] Delivered id=8 topic=grades
+[05:50:08.230] Delivered id=8 topic=grades
+[05:50:08.231] Publish id=8 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 4.2524ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:08.466] Delivered id=9 topic=grades
+[05:50:08.467] Delivered id=9 topic=grades
+[05:50:08.468] Publish id=9 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 4.4232ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:08.740] Delivered id=10 topic=grades
+[05:50:08.741] Delivered id=10 topic=grades
+[05:50:08.740] Publish id=10 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 2.6588ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+info: Grpc.AspNetCore.Server.ServerCallHandler[7]
+      Error status code 'Unauthenticated' with detail 'missing token' raised.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 0 application/grpc 18.3951ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+info: Grpc.AspNetCore.Server.ServerCallHandler[7]
+      Error status code 'PermissionDenied' with detail 'topic not allowed' raised.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 0 application/grpc 0.5308ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:16.941] Delivered id=11 topic=grades
+[05:50:16.941] Delivered id=11 topic=grades
+[05:50:16.943] Publish id=11 topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 3.1866ms
+[05:50:19.798] Subscriber gone topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Subscribe'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Subscribe - 200 - application/grpc 22059.0082ms
+[05:50:20.424] Subscriber gone topic=grades
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Subscribe'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Subscribe - 200 - application/grpc 20336.7427ms

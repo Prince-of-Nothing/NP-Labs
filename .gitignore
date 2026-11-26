@@ -38,3 +38,6 @@ Desktop.ini
 *~
 *.tmp
 *.swp
+
+# Arm64 binaries staged only for pulling to the phone
+.opencode-dist/

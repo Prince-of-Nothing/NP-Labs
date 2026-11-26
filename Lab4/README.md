@@ -99,3 +99,13 @@ docker compose run --rm publisher-grpc
 - Two subscribers: both receive both messages in order.
 - Restart keeps messages and continues ids (1,2 → restart → 3).
 - HTTP auth 401/403/202; gRPC Unauthenticated/PermissionDenied/OK.
+
+
+## Cross-device evidence (2026-11-26)
+
+HTTP: Go broker on the desktop + Go phone and C# desktop publishers/subscribers
+(2 publishers, 2 subscribers, ids 1-11, auth 401/403/202, restart id 12).
+gRPC: C# broker on the desktop + Go phone and C# desktop clients
+(Unauthenticated/PermissionDenied/OK, restart id 12).
+See [Lab4/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+

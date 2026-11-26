@@ -1,0 +1,11 @@
+Publishing to http://192.168.1.33:8080 topic=grades as Desktop. Type lines:
+202 Accepted: {"id":1,"topic":"grades","sender":"Desktop","body":"http from desktop 1","time":"2026-11-26T03:48:35.0729908Z"}
+
+202 Accepted: {"id":2,"topic":"grades","sender":"Desktop","body":"http from desktop 2","time":"2026-11-26T03:48:35.0894019Z"}
+
+202 Accepted: {"id":3,"topic":"grades","sender":"Desktop","body":"http from desktop 3","time":"2026-11-26T03:48:35.0949485Z"}
+
+202 Accepted: {"id":4,"topic":"grades","sender":"Desktop","body":"http from desktop 4","time":"2026-11-26T03:48:35.100811Z"}
+
+202 Accepted: {"id":5,"topic":"grades","sender":"Desktop","body":"http from desktop 5","time":"2026-11-26T03:48:35.1059244Z"}
+

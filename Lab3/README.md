@@ -70,3 +70,11 @@ Lab 3 uses `network_mode: host` in compose so UDP broadcast works.
 Discovery (simultaneous and staggered starts), general channel, `/users`,
 `/quit` leave notice, duplicate-name rejection, encrypted private messages,
 invalid datagrams dropped without crashing.
+
+
+## Cross-device evidence (2026-11-26)
+
+Go peer on Android (192.168.1.5) + C# peer on Windows (192.168.1.33): discovery,
+general channel, encrypted private messages, leave, and complete datagram logs.
+See [Lab3/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+

@@ -1,0 +1,2 @@
+order_id,endpoint,tag,items,expected_prep_ms,accepted_at,started_at,ready_at,queue_wait_ms,prep_actual_ms,worker_id,status
+1,127.0.0.1:56164,1,coffee=1,4000,2026-11-26T03:52:12.3558951Z,2026-11-26T03:52:12.3572950Z,2026-11-26T03:52:16.7279931Z,1,4371,1,ready

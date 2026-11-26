@@ -98,3 +98,11 @@ docker compose run --rm coffee-provider
 - 20 clients against 12 workers: all 20 orders accepted and all 20 became ready
   (FIFO queue, one worker per CPU core).
 - Server disappearance: C#, Rust and Go clients exit cleanly (code 0).
+
+
+## Cross-device evidence (2026-11-26)
+
+Real run with the server on the Windows desktop and 16 Go clients + provider on
+an Android phone (12 workers, 16 simultaneous clients, 16/16 ready, auth-free
+raw TCP). See [Lab2/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+

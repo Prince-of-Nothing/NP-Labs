@@ -1,0 +1,35 @@
+﻿=== phone subscriber (Go gRPC, 192.168.1.5) ===
+Subscribing to 192.168.1.33:5000 topic=grades
+[grades] teacher: grpc from desktop 1
+[grades] teacher: grpc from desktop 2
+[grades] teacher: grpc from desktop 3
+[grades] teacher: grpc from desktop 4
+[grades] teacher: grpc from desktop 5
+[grades] phone: grpc from phone 1
+[grades] phone: grpc from phone 2
+[grades] phone: grpc from phone 3
+[grades] phone: grpc from phone 4
+[grades] phone: grpc from phone 5
+[grades] phone: auth ok phone message
+
+
+=== phone publisher ===
+Publishing to 192.168.1.33:5000 topic=grades as Phone. Type lines:
+Published id=6
+Published id=7
+Published id=8
+Published id=9
+Published id=10
+=== auth: no token ===
+Publishing to 192.168.1.33:5000 topic=grades as Phone. Type lines:
+RPC error: rpc error: code = Unauthenticated desc = missing token
+=== auth: wrong topic ===
+Publishing to 192.168.1.33:5000 topic=news as Phone. Type lines:
+RPC error: rpc error: code = PermissionDenied desc = topic not allowed
+=== auth: valid ===
+Publishing to 192.168.1.33:5000 topic=grades as Phone. Type lines:
+Published id=11
+=== after restart ===
+Publishing to 192.168.1.33:5000 topic=grades as Phone. Type lines:
+Published id=12
+

@@ -1,5 +1,10 @@
 ﻿=== phone subscriber (Go, 192.168.1.5) ===
 Subscribing to http://192.168.1.33:8080 topic=grades
+[grades] Desktop: http from desktop 1
+[grades] Desktop: http from desktop 2
+[grades] Desktop: http from desktop 3
+[grades] Desktop: http from desktop 4
+[grades] Desktop: http from desktop 5
 [grades] Phone: http from phone 1
 [grades] Phone: http from phone 2
 [grades] Phone: http from phone 3
@@ -10,20 +15,20 @@ Subscribing to http://192.168.1.33:8080 topic=grades
 
 === phone publisher (Go, 192.168.1.5) ===
 Publishing to http://192.168.1.33:8080 topic=grades as Phone. Type lines:
-202 202 Accepted: {"id":1,"topic":"grades","sender":"Phone","body":"http from phone 1","time":"2026-11-26T03:45:29.6221681Z"}
-202 202 Accepted: {"id":2,"topic":"grades","sender":"Phone","body":"http from phone 2","time":"2026-11-26T03:45:30.0148712Z"}
-202 202 Accepted: {"id":3,"topic":"grades","sender":"Phone","body":"http from phone 3","time":"2026-11-26T03:45:30.4268257Z"}
-202 202 Accepted: {"id":4,"topic":"grades","sender":"Phone","body":"http from phone 4","time":"2026-11-26T03:45:30.7691103Z"}
-202 202 Accepted: {"id":5,"topic":"grades","sender":"Phone","body":"http from phone 5","time":"2026-11-26T03:45:31.1456648Z"}
+202 202 Accepted: {"id":6,"topic":"grades","sender":"Phone","body":"http from phone 1","time":"2026-11-26T03:48:36.9898522Z"}
+202 202 Accepted: {"id":7,"topic":"grades","sender":"Phone","body":"http from phone 2","time":"2026-11-26T03:48:37.1953644Z"}
+202 202 Accepted: {"id":8,"topic":"grades","sender":"Phone","body":"http from phone 3","time":"2026-11-26T03:48:37.5024117Z"}
+202 202 Accepted: {"id":9,"topic":"grades","sender":"Phone","body":"http from phone 4","time":"2026-11-26T03:48:37.6244644Z"}
+202 202 Accepted: {"id":10,"topic":"grades","sender":"Phone","body":"http from phone 5","time":"2026-11-26T03:48:37.8930543Z"}
 
 
 === auth tests from phone ===
 grades token=(none) -> 401 
 news token=tok-phone -> 403 
-grades token=tok-phone -> 202 {"id":6,"topic":"grades","sender":"Phone","body":"auth ok phone message","time":"2026-11-26T03:45:38.0153561Z"}
+grades token=tok-phone -> 202 {"id":11,"topic":"grades","sender":"Phone","body":"auth ok phone message","time":"2026-11-26T03:48:44.2338655Z"}
 
 
 === post-restart publish from phone ===
-after restart publish -> 202 {"id":7,"topic":"grades","sender":"Phone","body":"after restart id continues","time":"2026-11-26T03:45:51.9556059Z"}
+after restart publish -> 202 {"id":12,"topic":"grades","sender":"Phone","body":"after restart id continues","time":"2026-11-26T03:49:05.9719393Z"}
 
 

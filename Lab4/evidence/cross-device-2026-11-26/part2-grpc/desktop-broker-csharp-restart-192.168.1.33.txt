@@ -1,0 +1,18 @@
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://[::]:5000
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\Dinusauuuur\AppData\Local\Temp\opencode\lab4-grpc-final
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[05:50:39.374] Publish id=12 topic=grades
+[05:50:39.367] DeliveryLoop started
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.33:5000/broker.Broker/Publish - 200 - application/grpc 138.4282ms
