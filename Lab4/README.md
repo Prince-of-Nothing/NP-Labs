@@ -103,6 +103,10 @@ docker compose run --rm publisher-grpc
 - Restart keeps messages and continues ids (1,2 → restart → 3).
 - HTTP auth 401/403/202; gRPC Unauthenticated/PermissionDenied/OK.
 
+**Bonuses:** the Lab 4 sheet has no language bonus. C\# and Go implementations are
+provided for both parts as cross-language compatibility (and as extra defense
+material), not as a graded bonus.
+
 
 ## Cross-device evidence (2026-11-26)
 

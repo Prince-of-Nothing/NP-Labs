@@ -104,6 +104,12 @@ docker compose run --rm coffee-provider
   (FIFO queue, one worker per CPU core).
 - Server disappearance: C#, Rust and Go clients exit cleanly (code 0).
 
+## Bonuses
+
+- **Two computers:** C\# server on Windows + Go clients/provider on Android and on a CachyOS desktop.
+- **Stock persistence:** atomic `stock-state.json` in the C\# and Go servers; verified across restarts.
+- **Two languages:** C\# server + Go clients interoperate (the Rust server/client are also present as a third implementation).
+
 
 ## Cross-device evidence (2026-11-26)
 

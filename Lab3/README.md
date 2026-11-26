@@ -90,7 +90,9 @@ Three peers on two real desktops: **Cara** (C#, Windows, 192.168.1.41) and
 `secret`. All three discovered each other, exchanged general messages, `/users`
 and leave notices, and exchanged AES-GCM private messages in both directions
 (only the receiver saw each one). A second `Alice` was refused, and random,
-600-character and 3000-byte datagrams were dropped and logged.
+600-character and 3000-byte datagrams were dropped and logged. This run also
+satisfies the **two-language bonus**: the C\# peer and the Go peers agree on the
+common message format and interoperate, including encrypted private messages.
 
 The run found a real same-computer issue: a broadcast sent out the Wi-Fi card
 does not come back to the other local sockets. Both implementations now also
