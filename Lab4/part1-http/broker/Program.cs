@@ -40,6 +40,7 @@ class Program
         public Stream Stream;
         public volatile bool Alive = true;
         public object WriteLock = new();
+        public string Client = "?";
     }
     class DeliveryItem { public Message Msg; }
 
@@ -278,7 +279,7 @@ class Program
         res.ContentType = "application/x-ndjson";
         res.SendChunked = true;
         var stream = res.OutputStream;
-        var sub = new Subscriber { Response = res, Stream = stream, Alive = true };
+        var sub = new Subscriber { Response = res, Stream = stream, Alive = true, Client = client };
         lock (topic.Lock) topic.Subscribers.Add(sub);
         Log($"Subscriber added topic={topicName} {client}");
 
@@ -339,12 +340,12 @@ class Program
                         sub.Stream.Write(data, 0, data.Length);
                         sub.Stream.Flush();
                     }
-                    Log($"Delivered id={msg.Id} topic={msg.Topic} to subscriber");
+                    Log($"Delivered id={msg.Id} topic={msg.Topic} to {sub.Client}: ok");
                 }
                 catch
                 {
                     sub.Alive = false;
-                    Log($"Subscriber write failed; removed");
+                    Log($"Delivery id={msg.Id} topic={msg.Topic} to {sub.Client}: write failed, subscriber removed");
                 }
             }
             // cleanup dead

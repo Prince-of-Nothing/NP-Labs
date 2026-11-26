@@ -1,0 +1,13 @@
+* Bob joined the chat
+* Cara joined the chat
+* Alice joined (private ep 192.168.1.22:59308). Type messages, /msg name text, /users, /quit
+[general] Cara: hello from Cara on windows
+[general] Bob: hello from Bob on linux
+[general] Alice: hello from Alice on linux
+Online:
+  Bob 192.168.1.22:50827
+  Cara 192.168.1.41:52413
+[private] you -> Bob: private from Alice
+[private] you -> Cara: private from Alice
+[private] Bob: private from Bob
+* Cara left the chat

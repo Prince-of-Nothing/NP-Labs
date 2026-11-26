@@ -1,0 +1,18 @@
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://[::]:5000
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\Dinusauuuur\RustroverProjects\NP-Labs\Lab4\evidence\two-desktop-2026-11-26\part2-grpc\broker-workdir
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://192.168.1.41:5000/broker.Broker/Publish - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /broker.Broker/Publish'
+[19:38:16.467] DeliveryLoop started
+[19:38:16.471] Publish id=12 topic=grades from ipv6:[::ffff:192.168.1.41]:65468: ok
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /broker.Broker/Publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://192.168.1.41:5000/broker.Broker/Publish - 200 - application/grpc 104.3455ms

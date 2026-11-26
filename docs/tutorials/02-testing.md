@@ -230,10 +230,13 @@ Captured cross-device evidence:
 | Lab | Folder | Result |
 |---|---|---|
 | 2 | `Lab2/evidence/cross-device-2026-11-26/` | 16 phone clients on 12 workers, 16/16 ready |
+| 2 | `Lab2/evidence/two-desktop-2026-11-26/` | 16 Go clients on a CachyOS desktop + 5 C# clients, 16/16 ready, disconnect refunds |
 | 2 | `Lab2/evidence/stock-persistence-2026-11-26/` | C# and Go stock survives restarts |
 | 3 | `Lab3/evidence/cross-device-2026-11-26/` | general + encrypted private both ways |
+| 3 | `Lab3/evidence/two-desktop-2026-11-26/` | 3 peers on 2 desktops, port 25565, encrypted private both ways, duplicate name, invalid datagrams |
 | 3 | `Lab3/evidence/local-multi-peer-2026-11-26/` | 3 peers, same port, all checks pass |
 | 4 | `Lab4/evidence/cross-device-2026-11-26/` | HTTP + gRPC, 2 pubs + 2 subs, auth, restart |
+| 4 | `Lab4/evidence/two-desktop-2026-11-26/` | HTTP + gRPC, 2 C# + 2 Go clients on 2 desktops, ids 1-12, auth, restart |
 
 ## Expected pass markers
 

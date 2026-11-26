@@ -25,6 +25,8 @@ type Order struct {
 	items  map[string]int
 	prep   int
 	cancel chan struct{}
+	// claimed: 0 while queued, 1 once a worker starts it or it is cancelled while queued.
+	claimed atomic.Int32
 }
 
 type Session struct {
@@ -174,8 +176,25 @@ func handleDisconnect(st *State, sess *Session) {
 	sess.orders = nil
 	sess.mu.Unlock()
 
+	refunded := false
 	for _, o := range orders {
 		o.cancel <- struct{}{}
+		// Whoever claims the order first owns it. If we win, no worker ever started it, so
+		// the products go back to the stock now, not when a worker finally reaches it.
+		// If a worker already claimed it, that worker stops and refunds (workerLoop).
+		if o.claimed.CompareAndSwap(0, 1) {
+			st.stockMu.Lock()
+			for p, q := range o.items {
+				st.stock[p] += q
+			}
+			st.stockMu.Unlock()
+			logMsg(fmt.Sprintf("Order %d cancelled while queued (client gone); products returned", o.id))
+			refunded = true
+		}
+	}
+	if refunded {
+		st.saveStock()
+		st.checkAlerts()
 	}
 
 	st.sessMu.Lock()
@@ -204,6 +223,10 @@ func handleDisconnect(st *State, sess *Session) {
 
 func workerLoop(st *State) {
 	for order := range st.queue {
+		// Already cancelled and refunded while it waited in the queue (see handleDisconnect).
+		if !order.claimed.CompareAndSwap(0, 1) {
+			continue
+		}
 		cancelled := false
 		remaining := order.prep
 		for remaining > 0 {
@@ -276,7 +299,7 @@ func handleClient(st *State, sess *Session) {
 			}
 		}
 		if len(line) > 4096 {
-			sendJSON(sess, map[string]interface{}{"type": "error", "msg": "message too long"})
+			sendErr(sess, "message too long")
 			continue
 		}
 		line = strings.TrimRight(line, "\r\n")
@@ -288,7 +311,7 @@ func handleClient(st *State, sess *Session) {
 		}
 		var v map[string]interface{}
 		if json.Unmarshal([]byte(line), &v) != nil {
-			sendJSON(sess, map[string]interface{}{"type": "error", "msg": "invalid json"})
+			sendErr(sess, "invalid json")
 			logMsg(fmt.Sprintf("Invalid input from %s", sess.endpoint))
 			if err != nil {
 				return
@@ -298,7 +321,7 @@ func handleClient(st *State, sess *Session) {
 		cmd, _ := v["cmd"].(string)
 		if !identified {
 			if cmd != "hello" {
-				sendJSON(sess, map[string]interface{}{"type": "error", "msg": "expected hello first"})
+				sendErr(sess, "expected hello first")
 				if err != nil {
 					return
 				}
@@ -359,7 +382,7 @@ func handleClient(st *State, sess *Session) {
 				items[prod] += q
 			}
 			if invalid || len(items) == 0 {
-				sendJSON(sess, map[string]interface{}{"type": "error", "msg": "invalid product or quantity"})
+				sendErr(sess, "invalid product or quantity")
 				logMsg(fmt.Sprintf("Invalid order from %s", sess.endpoint))
 				continue
 			}
@@ -408,7 +431,7 @@ func handleClient(st *State, sess *Session) {
 			st.checkAlerts()
 		case "deliver":
 			if !sess.isProvider {
-				sendJSON(sess, map[string]interface{}{"type": "error", "msg": "only provider can deliver"})
+				sendErr(sess, "only provider can deliver")
 				logMsg(fmt.Sprintf("Deliver refused (not provider) from %s", sess.endpoint))
 				continue
 			}
@@ -433,7 +456,7 @@ func handleClient(st *State, sess *Session) {
 				items[prod] += q
 			}
 			if invalid || len(items) == 0 {
-				sendJSON(sess, map[string]interface{}{"type": "error", "msg": "invalid product or quantity"})
+				sendErr(sess, "invalid product or quantity")
 				continue
 			}
 			st.stockMu.Lock()
@@ -450,7 +473,7 @@ func handleClient(st *State, sess *Session) {
 			handleDisconnect(st, sess)
 			return
 		default:
-			sendJSON(sess, map[string]interface{}{"type": "error", "msg": "unknown command"})
+			sendErr(sess, "unknown command")
 			logMsg(fmt.Sprintf("Unknown command from %s: %s", sess.endpoint, cmd))
 		}
 		if err != nil {
@@ -509,4 +532,10 @@ func main() {
 		st.sessMu.Unlock()
 		go handleClient(st, sess)
 	}
+}
+
+// sendErr answers with an error message and logs it with the client's endpoint.
+func sendErr(sess *Session, msg string) {
+	logMsg(fmt.Sprintf("Error to %s: %s", sess.endpoint, msg))
+	sendJSON(sess, map[string]interface{}{"type": "error", "msg": msg})
 }

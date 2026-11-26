@@ -1,6 +1,8 @@
 # Lab 3 — LAN Chat (UDP)
 
 Defense notes and control-question answers: [KNOWLEDGE.md](./KNOWLEDGE.md).
+Written report: [report/report.pdf](./report/report.pdf) (LaTeX source in
+[report/report.tex](./report/report.tex)).
 
 Serverless peer-to-peer chat over raw UDP sockets. One program, every running
 copy is a peer. No server, no chat/messaging library, no service discovery
@@ -79,4 +81,21 @@ general channel, encrypted private messages, leave, and complete datagram logs.
 See [Lab3/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
 The same-port requirement (three peers on one computer) is verified in
 [Lab3/evidence/local-multi-peer-2026-11-26/](./evidence/local-multi-peer-2026-11-26/README.md).
+
+
+## Two-desktop evidence (2026-11-26)
+
+Three peers on two real desktops: **Cara** (C#, Windows, 192.168.1.41) and
+**Alice + Bob** (Go, CachyOS, 192.168.1.22) on port **25565/UDP**, passphrase
+`secret`. All three discovered each other, exchanged general messages, `/users`
+and leave notices, and exchanged AES-GCM private messages in both directions
+(only the receiver saw each one). A second `Alice` was refused, and random,
+600-character and 3000-byte datagrams were dropped and logged.
+
+The run found a real same-computer issue: a broadcast sent out the Wi-Fi card
+does not come back to the other local sockets. Both implementations now also
+send to the loopback broadcast **127.255.255.255**. Port 25565 was used because
+the Linux desktop's UFW already allows it; 9000/UDP is blocked by the default
+input policy. See
+[Lab3/evidence/two-desktop-2026-11-26/](./evidence/two-desktop-2026-11-26/README.md).
 

@@ -113,3 +113,16 @@ raw TCP). See [Lab2/evidence/cross-device-2026-11-26/](./evidence/cross-device-2
 The stock-persistence bonus is verified in
 [Lab2/evidence/stock-persistence-2026-11-26/](./evidence/stock-persistence-2026-11-26/README.md).
 
+
+## Two-desktop evidence (2026-11-26)
+
+A second cross-device run used **two desktop computers** instead of the phone:
+the C# server on this Windows desktop (192.168.1.41, 12 workers) and 16 Go
+clients + provider on a CachyOS desktop (`Cupcake`, 192.168.1.22). All 16
+orders were accepted and became ready; average queue wait 1048.5 ms, maximum
+4194.4 ms. A second run with five C# clients measured client-side latency
+(9.0 ms average accept, 4197.6 ms average ready wait), and a disconnect run
+cancelled four queued orders and returned their products. Metrics, transcripts
+and charts are in
+[Lab2/evidence/two-desktop-2026-11-26/](./evidence/two-desktop-2026-11-26/README.md).
+

@@ -1,0 +1,6 @@
+Publishing to 192.168.1.41:5000 topic=grades as phone. Type lines:
+Published id=6
+Published id=7
+Published id=8
+Published id=9
+Published id=10

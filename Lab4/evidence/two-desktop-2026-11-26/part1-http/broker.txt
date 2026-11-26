@@ -1,0 +1,54 @@
+2026/11/26 19:36:12 Broker listening on :8080
+2026/11/26 19:36:21 GET /topics/grades/stream from 192.168.1.22:47062
+2026/11/26 19:36:21 Subscriber added topic=grades 192.168.1.22:47062
+2026/11/26 19:36:21 GET /topics/grades/stream from 192.168.1.41:49586
+2026/11/26 19:36:21 Subscriber added topic=grades 192.168.1.41:49586
+2026/11/26 19:36:28 POST /topics/grades/messages from 192.168.1.41:56811
+2026/11/26 19:36:28 Publish accepted id=1 topic=grades from 192.168.1.41:56811
+2026/11/26 19:36:28 Delivered id=1 topic=grades
+2026/11/26 19:36:28 Delivered id=1 topic=grades
+2026/11/26 19:36:28 POST /topics/grades/messages from 192.168.1.41:56811
+2026/11/26 19:36:28 Publish accepted id=2 topic=grades from 192.168.1.41:56811
+2026/11/26 19:36:28 Delivered id=2 topic=grades
+2026/11/26 19:36:28 Delivered id=2 topic=grades
+2026/11/26 19:36:28 POST /topics/grades/messages from 192.168.1.41:56811
+2026/11/26 19:36:28 Publish accepted id=3 topic=grades from 192.168.1.41:56811
+2026/11/26 19:36:28 Delivered id=3 topic=grades
+2026/11/26 19:36:28 Delivered id=3 topic=grades
+2026/11/26 19:36:29 POST /topics/grades/messages from 192.168.1.41:56811
+2026/11/26 19:36:29 Publish accepted id=4 topic=grades from 192.168.1.41:56811
+2026/11/26 19:36:29 Delivered id=4 topic=grades
+2026/11/26 19:36:29 Delivered id=4 topic=grades
+2026/11/26 19:36:29 POST /topics/grades/messages from 192.168.1.41:56811
+2026/11/26 19:36:29 Publish accepted id=5 topic=grades from 192.168.1.41:56811
+2026/11/26 19:36:29 Delivered id=5 topic=grades
+2026/11/26 19:36:29 Delivered id=5 topic=grades
+2026/11/26 19:36:34 POST /topics/grades/messages from 192.168.1.22:47082
+2026/11/26 19:36:34 Publish accepted id=6 topic=grades from 192.168.1.22:47082
+2026/11/26 19:36:34 Delivered id=6 topic=grades
+2026/11/26 19:36:34 Delivered id=6 topic=grades
+2026/11/26 19:36:34 POST /topics/grades/messages from 192.168.1.22:47082
+2026/11/26 19:36:34 Publish accepted id=7 topic=grades from 192.168.1.22:47082
+2026/11/26 19:36:34 Delivered id=7 topic=grades
+2026/11/26 19:36:34 Delivered id=7 topic=grades
+2026/11/26 19:36:35 POST /topics/grades/messages from 192.168.1.22:47082
+2026/11/26 19:36:35 Publish accepted id=8 topic=grades from 192.168.1.22:47082
+2026/11/26 19:36:35 Delivered id=8 topic=grades
+2026/11/26 19:36:35 Delivered id=8 topic=grades
+2026/11/26 19:36:35 POST /topics/grades/messages from 192.168.1.22:47082
+2026/11/26 19:36:35 Publish accepted id=9 topic=grades from 192.168.1.22:47082
+2026/11/26 19:36:35 Delivered id=9 topic=grades
+2026/11/26 19:36:35 Delivered id=9 topic=grades
+2026/11/26 19:36:35 POST /topics/grades/messages from 192.168.1.22:47082
+2026/11/26 19:36:35 Delivered id=10 topic=grades
+2026/11/26 19:36:35 Delivered id=10 topic=grades
+2026/11/26 19:36:35 Publish accepted id=10 topic=grades from 192.168.1.22:47082
+2026/11/26 19:36:43 POST /topics/grades/messages from 192.168.1.22:39120
+2026/11/26 19:36:43 Publish unauthorized (no token) 192.168.1.22:39120 topic=grades
+2026/11/26 19:36:43 POST /topics/news/messages from 192.168.1.22:39126
+2026/11/26 19:36:43 Publish forbidden 192.168.1.22:39126 topic=news
+2026/11/26 19:36:43 Subscriber gone topic=grades 192.168.1.41:49586
+2026/11/26 19:36:43 POST /topics/grades/messages from 192.168.1.22:39128
+2026/11/26 19:36:43 Delivered id=11 topic=grades
+2026/11/26 19:36:43 Publish accepted id=11 topic=grades from 192.168.1.22:39128
+2026/11/26 19:36:51 Subscriber gone topic=grades 192.168.1.22:47062

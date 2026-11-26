@@ -1,0 +1,11 @@
+Publishing to http://192.168.1.41:8080 topic=grades as teacher. Type lines:
+202 Accepted: {"id":1,"topic":"grades","sender":"teacher","body":"desktop message 1","time":"2026-11-26T17:36:28.2520823Z"}
+
+202 Accepted: {"id":2,"topic":"grades","sender":"teacher","body":"desktop message 2","time":"2026-11-26T17:36:28.5726703Z"}
+
+202 Accepted: {"id":3,"topic":"grades","sender":"teacher","body":"desktop message 3","time":"2026-11-26T17:36:28.9709841Z"}
+
+202 Accepted: {"id":4,"topic":"grades","sender":"teacher","body":"desktop message 4","time":"2026-11-26T17:36:29.3716864Z"}
+
+202 Accepted: {"id":5,"topic":"grades","sender":"teacher","body":"desktop message 5","time":"2026-11-26T17:36:29.772283Z"}
+

@@ -1,0 +1,548 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{hyperref}
+
+\definecolor{primary}{RGB}{18,52,86}
+\definecolor{secondary}{RGB}{41,128,185}
+\definecolor{codebg}{RGB}{247,249,250}
+\definecolor{codeframe}{RGB}{209,213,219}
+\definecolor{codegreen}{RGB}{39,136,60}
+\definecolor{codegray}{RGB}{108,117,125}
+
+\hypersetup{colorlinks=true,linkcolor=primary,urlcolor=secondary,citecolor=secondary}
+
+\lstdefinestyle{code}{
+    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
+    keywordstyle=\color{secondary}\bfseries, stringstyle=\color{codegreen},
+    commentstyle=\color{codegray}\itshape, numbers=left,
+    numberstyle=\tiny\color{codegray}, numbersep=8pt, frame=single,
+    rulecolor=\color{codeframe}, breaklines=true, breakatwhitespace=true,
+    showstringspaces=false, tabsize=4, captionpos=b
+}
+\lstdefinestyle{plain}{
+    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
+    frame=single, rulecolor=\color{codeframe}, breaklines=true,
+    showstringspaces=false, captionpos=b
+}
+\lstdefinestyle{term}{
+    backgroundcolor=\color{black}, basicstyle=\small\ttfamily\color{white},
+    frame=none, numbers=none, breaklines=true, showstringspaces=false,
+    captionpos=b
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Network Programming --- Laboratory Work 4}
+\fancyhead[R]{\small Dinu Plesu, FAF-241}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\newcommand{\studentgroup}{FAF-241}
+
+\begin{document}
+\sloppy
+\setlength{\emergencystretch}{3em}
+
+\begin{titlepage}
+    \centering
+    {\large \textbf{TECHNICAL UNIVERSITY OF MOLDOVA}}\\[0.2cm]
+    {\large Faculty of Computers, Informatics and Microelectronics}\\[0.2cm]
+    {\large Department of Software Engineering and Automatics}\\[0.8cm]
+
+    \includegraphics[width=3.5cm]{figures/utm_logo.png}\\[1.2cm]
+
+    {\Large \textbf{LABORATORY WORK NO. 4}}\\[0.4cm]
+    {\LARGE \textbf{A Message Broker:\\ HTTP Streaming and gRPC}}\\[0.4cm]
+    {\large Course: Network Programming}\\[2.5cm]
+
+    \begin{minipage}{0.45\textwidth}
+        \flushleft
+        \textbf{Author:}\\
+        Dinu \textsc{Plesu}\\
+        Student of group: \studentgroup
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \flushright
+        \textbf{Verified by:}\\
+        Lecturer / Supervisor\\
+        Fistic Cristofor
+    \end{minipage}
+
+    \vfill
+    {\large Chi\c{s}in\u{a}u --- 2026}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+The goal of this laboratory work is to build a message broker: the program in
+the middle of many distributed systems. Publishers send messages to a topic;
+the broker puts each one in a queue and delivers it in the background to every
+subscriber of that topic. Publishers and subscribers never talk to each other,
+only to the broker, so either side can stop, change or multiply without the
+other noticing.
+
+The lab has two parts, defended separately but graded together:
+
+\begin{itemize}[itemsep=2pt]
+    \item \textbf{Part 1, HTTP}: a REST API with JSON, and an answer that stays
+          open to stream the messages.
+    \item \textbf{Part 2, gRPC}: the same broker and the same tasks, with a
+          contract in Protocol Buffers and a server-streaming call for each
+          subscriber.
+\end{itemize}
+
+The implementation is written in C\# and Go. Part 1 uses \texttt{HttpListener}
+in C\# and \texttt{net/http} in Go, with no web framework. Part 2 uses
+\texttt{Grpc.AspNetCore} in C\# and \texttt{google.golang.org/grpc} in Go, with
+one shared \texttt{broker.proto}. All three tasks (publish and deliver,
+restart, strangers/tokens) are implemented in both parts.
+
+\section{Architecture}
+
+\subsection{Topics, messages and ids}
+
+A topic is a named channel. Every topic keeps its messages in order; the ids
+start at 1 and grow by one. A publish gives the message its id and time and
+puts it in the topic queue. The publisher does not wait for the subscribers:
+the broker answers at once and a background delivery task writes the message to
+every subscriber of that topic.
+
+The broker protects the shared state with locks:
+
+\begin{itemize}[itemsep=2pt]
+    \item the topic map has a lock, because new topics can be created
+          concurrently;
+    \item each topic has a lock; \texttt{NextId++}, append and timestamp happen
+          inside it, so two publishers never get the same id;
+    \item the subscriber list is copied under the topic lock before delivery;
+          a failed write removes that subscriber and the others continue.
+\end{itemize}
+
+Part 1 uses a channel/queue and a delivery task per topic. Part 2 uses an
+unbounded channel and one delivery loop; messages are written to the
+server-streaming calls in id order.
+
+\subsection{Persistence}
+
+After every accepted message the topic is serialized to
+\texttt{broker-data/<topic>/messages.json}. The new content is written to a
+temporary file and moved over the old one, so a crash in the middle of a write
+leaves the old file intact. On startup the broker loads every topic and sets
+\texttt{NextId = max(id) + 1}, so a restart loses nothing and the ids continue.
+
+\subsection{Tokens}
+
+The broker reads \texttt{tokens.txt}; each line is
+\texttt{<token> <publisher> <topic1,topic2>}. Part 1 reads the token from
+\texttt{Authorization: Bearer <token>}; missing or unknown token gives
+\textbf{401 Unauthorized} with \texttt{WWW-Authenticate: Bearer}, and a valid
+token used for a topic it does not allow gives \textbf{403 Forbidden}. Part 2
+reads the token from the \texttt{authorization} metadata; the same cases give
+\textbf{Unauthenticated} and \textbf{PermissionDenied}.
+
+With authentication on, the broker records the token owner as the sender, not a
+client-supplied name. This is true for both implementations.
+
+\section{Part 1: HTTP}
+
+\subsection{API}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+Request & Answer & What it does \\
+\midrule
+\texttt{POST /topics/\{topic\}/messages} & 202 Accepted & queue a message and answer with id and time \\
+\texttt{GET /topics/\{topic\}/stream} & 200 OK & keep the answer open and stream new messages \\
+\texttt{GET /topics} & 200 OK & list the topics and their sizes \\
+\bottomrule
+\end{tabularx}
+\caption{The HTTP API of the broker.}
+\end{table}
+
+A publish request body contains \texttt{sender} and \texttt{body}; the broker
+adds \texttt{id}, \texttt{topic} and \texttt{time}. The stream is
+newline-delimited JSON, one message per line, flushed after every message. A
+subscriber that disappears does not stop delivery to the others: a failed write
+removes it. The C\# broker also writes a periodic heartbeat to detect a dead
+subscriber; the Go broker detects it from the request context.
+
+\subsection{Why 202 Accepted}
+
+The request is accepted and queued; delivery happens later in the background.
+202 says ``accepted for processing'', not ``already delivered to everyone''. A
+publish therefore stays fast even when a subscriber is slow.
+
+\subsection{Implementation}
+
+The C\# broker is built on \texttt{HttpListener}; the Go broker uses
+\texttt{net/http}. Both keep the same API and the same JSON fields, so either
+client works with either broker. The broker logs every request, every publish
+and every delivery with the client endpoint, topic, message id and result.
+
+\section{Part 2: gRPC}
+
+\subsection{Contract}
+
+The shared contract is \texttt{part2-grpc/proto/broker.proto}:
+
+\begin{lstlisting}[style=plain,caption={The Protocol Buffers contract shared by the broker, publishers and subscribers.}]
+syntax = "proto3";
+package broker;
+import "google/protobuf/timestamp.proto";
+
+service Broker {
+  rpc Publish (PublishRequest) returns (PublishReply);
+  rpc Subscribe (SubscribeRequest) returns (stream Message);
+  rpc ListTopics (ListTopicsRequest) returns (ListTopicsReply);
+}
+
+message Message {
+  int64 id = 1;
+  string topic = 2;
+  string sender = 3;
+  string body = 4;
+  google.protobuf.Timestamp time = 5;
+}
+\end{lstlisting}
+
+\texttt{Publish} is unary, \texttt{Subscribe} is server-streaming and
+\texttt{ListTopics} is unary. Part 2 has no HTTP API: the gRPC contract replaces
+the table of methods, paths, status codes and JSON fields. A subscriber opens
+one HTTP/2 stream, and the broker keeps writing messages into it for as long as
+it is open.
+
+\subsection{Authentication and errors}
+
+The token travels in the \texttt{authorization} metadata
+(\texttt{Bearer <token>}). Missing or unknown token gives
+\texttt{Unauthenticated}; a valid token for a topic it does not allow gives
+\texttt{PermissionDenied}; a valid token for an allowed topic succeeds. With
+authentication on, the stored sender is the token owner.
+
+\subsection{Persistence}
+
+Part 2 uses the same \texttt{broker-data} layout and the same atomic
+temporary-file-and-rename write. A restart keeps the messages and continues the
+ids, exactly as in Part 1.
+
+\section{Testing and results}
+
+\subsection{Environment and topology}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+Component & Value used for the measurements \\
+\midrule
+Desktop A (Windows) & HP OMEN, Intel Core i5-13420H, 8 cores / 12 threads, 16 GB RAM, Windows 11 IoT Enterprise LTSC 10.0.26300, .NET 10, Go 1.27.4 \\
+Desktop B (Linux) & CachyOS, Linux 7.3.6-1, Intel Core i5-10300H, 4 cores / 8 threads, 7.6 GiB RAM, Go 1.27.4 \\
+Network & same Wi-Fi subnet; A = 192.168.1.41, B = 192.168.1.22 \\
+HTTP broker & Go, port 8080, on desktop A \\
+gRPC broker & C\#, port 5000, on desktop A \\
+\bottomrule
+\end{tabularx}
+\caption{Two-desktop test environment.}
+\end{table}
+
+For each part, two publishers and two subscribers ran at the same time: one
+C\# publisher and one C\# subscriber on Windows, and one Go publisher and one
+Go subscriber on Linux. The brokers ran on Windows. Both subscribers opened
+their stream before the publishers started.
+
+\subsection{Part 1: HTTP results}
+
+The C\# publisher used token \texttt{tok-teacher} and published five messages;
+the Go publisher used \texttt{tok-phone} and published five messages. Ids
+1--10 were unique and in order. Both subscribers received all ten messages, in
+order, with the token owner as sender:
+
+\begin{lstlisting}[style=term,caption={The Linux Go subscriber received both publishers' messages in order.}]
+Subscribing to http://192.168.1.41:8080 topic=grades
+[grades] teacher: desktop message 1
+[grades] teacher: desktop message 2
+[grades] teacher: desktop message 3
+[grades] teacher: desktop message 4
+[grades] teacher: desktop message 5
+[grades] phone: linux message 1
+[grades] phone: linux message 2
+[grades] phone: linux message 3
+[grades] phone: linux message 4
+[grades] phone: linux message 5
+\end{lstlisting}
+
+The broker log confirms that every publish was delivered to both subscribers:
+
+\begin{lstlisting}[style=plain,caption={Broker log: one publish, two deliveries.}]
+... POST /topics/grades/messages from 192.168.1.41:64751
+... Delivered id=1 topic=grades
+... Delivered id=1 topic=grades
+... Publish accepted id=1 topic=grades from 192.168.1.41:64751
+\end{lstlisting}
+
+The authentication checks gave exactly the required results:
+
+\begin{lstlisting}[style=plain,caption={HTTP auth: 401 with \texttt{WWW-Authenticate}, 403, then 202.}]
+### no token -> expect 401
+HTTP/1.1 401 Unauthorized
+Www-Authenticate: Bearer
+
+### tok-phone to news -> expect 403
+HTTP/1.1 403 Forbidden
+
+### tok-phone to grades -> expect 202
+HTTP/1.1 202 Accepted
+{"id":11,...,"sender":"phone","body":"auth ok",...}
+\end{lstlisting}
+
+The broker was stopped and started again in the same working directory. The
+next publish got \textbf{id 12}; the file
+\texttt{broker-data/grades/messages.json} still held all twelve messages. This
+proves that nothing is lost and that the ids continue after a restart.
+
+\subsection{Part 2: gRPC results}
+
+The same two publishers and two subscribers were used with the gRPC broker.
+The C\# publisher published five messages and the Go publisher five more; ids
+1--10 were unique. Both subscribers received all ten messages in order:
+
+\begin{lstlisting}[style=term,caption={The Linux Go gRPC subscriber received both publishers' messages.}]
+Subscribing to 192.168.1.41:5000 topic=grades
+[grades] teacher: desktop grpc message 1
+[grades] teacher: desktop grpc message 2
+[grades] teacher: desktop grpc message 3
+[grades] teacher: desktop grpc message 4
+[grades] teacher: desktop grpc message 5
+[grades] phone: linux grpc message 1
+[grades] phone: linux grpc message 2
+[grades] phone: linux grpc message 3
+[grades] phone: linux grpc message 4
+[grades] phone: linux grpc message 5
+\end{lstlisting}
+
+The gRPC authentication checks gave the required status codes:
+
+\begin{lstlisting}[style=plain,caption={gRPC auth: Unauthenticated, PermissionDenied, then OK.}]
+### no token -> expect Unauthenticated
+RPC error: rpc error: code = Unauthenticated desc = missing token
+
+### tok-phone to news -> expect PermissionDenied
+RPC error: rpc error: code = PermissionDenied desc = topic not allowed
+
+### tok-phone to grades -> expect OK
+Published id=11
+\end{lstlisting}
+
+After a restart the next publish got \textbf{id 12}, and the persisted file
+still held all twelve messages. The same ids and the same message contents were
+used in both parts, which makes the HTTP and gRPC results directly comparable.
+
+\subsection{HTTP versus gRPC}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+Aspect & HTTP (Part 1) & gRPC (Part 2) \\
+\midrule
+Contract & hand-written paths, methods, status codes and JSON fields & \texttt{broker.proto}, generated stubs \\
+Transport & HTTP/1.1, JSON & HTTP/2, binary Protocol Buffers \\
+Publish & \texttt{POST}, 202 Accepted & unary \texttt{Publish} \\
+Subscribe & \texttt{GET}, open response, NDJSON & server-streaming \texttt{Subscribe} \\
+Auth error & 401 / 403 & Unauthenticated / PermissionDenied \\
+Topics & \texttt{GET /topics} & unary \texttt{ListTopics} \\
+Persistence & temp file + rename & same \\
+\bottomrule
+\end{tabularx}
+\caption{The two parts implement the same broker with different contracts.}
+\end{table}
+
+\subsection{Figures}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/lab4-http-broker.png}
+\caption{The HTTP broker: requests, topics and deliveries.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/lab4-http-subscriber.png}
+\caption{An HTTP subscriber receiving the stream.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/lab4-http-auth.png}
+\caption{HTTP authentication: 401, 403 and 202.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/lab4-grpc-broker.png}
+\caption{The gRPC broker: unary publishes and stream subscribers.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/lab4-grpc-subscriber.png}
+\caption{A gRPC subscriber receiving the server stream.}
+\end{figure}
+
+\section{Answers to the defense questions}
+
+\textbf{Why 202 Accepted and not 200?} The request is accepted and queued;
+delivery to subscribers happens later in the background. 202 says ``accepted
+for processing'', not ``already delivered to everyone''.
+
+\textbf{Why a queue plus a background delivery task?} It decouples publisher
+latency from subscriber speed. A slow subscriber must not block a publish. The
+queue keeps per-topic order; one delivery task consumes messages in order and
+fans them out.
+
+\textbf{How are ids unique with two publishers at the same time?} Each topic has
+a lock; \texttt{NextId++}, append and timestamp happen inside it. Two
+publishers therefore get consecutive, unique ids. The topic map has its own
+lock because new topics can be created concurrently.
+
+\textbf{How does one publish reach several subscribers?} The delivery task
+keeps a list of open subscriber streams/channels per topic, snapshots it, and
+writes the message to each. A failed write removes that subscriber; the others
+continue.
+
+\textbf{How is a gone subscriber detected?} HTTP: a periodic heartbeat write (or
+any message write) fails, and the subscriber is removed. gRPC: the request's
+context is cancelled, the \texttt{Subscribe} handler returns and the stream is
+removed.
+
+\textbf{How does a restart lose nothing?} After every accepted message the topic
+is serialized to a temporary file and moved over \texttt{messages.json}. On
+startup the broker loads every topic file and sets
+\texttt{NextId = max(id) + 1}. A crash during the write leaves the old file
+intact because the replacement is a rename.
+
+\textbf{Why is the broker not an existing broker?} The lab requires the broker
+itself: only the standard HTTP server/client (Part 1) and gRPC (Part 2);
+RabbitMQ, Kafka, Redis, NATS and similar systems are forbidden.
+
+\textbf{What is logged?} Every request (method, path, client), every publish
+(id, topic, sender, client), every delivery (id, topic, client) and every
+subscriber add/remove, with the result.
+
+\textbf{Do subscribers get old messages after reconnect?} No. \texttt{Subscribe}
+delivers new messages as they arrive, as the lab requires. Persistence is for
+surviving a broker restart and continuing ids, not for replaying history to a
+new subscriber.
+
+\textbf{Slow subscriber.} HTTP subscribers are removed when a write fails; the
+Go implementation drops a subscriber whose buffered channel is full. Delivery
+to the remaining subscribers continues; one slow client cannot stall the
+broker.
+
+\textbf{Token errors.} HTTP uses 401 for ``no/unknown token'' and 403 for
+``valid token, topic not allowed''. gRPC uses \texttt{Unauthenticated} and
+\texttt{PermissionDenied} for the same two cases. With authentication on, the
+sender is the token owner.
+
+\textbf{HTTP versus gRPC.} HTTP/1.1 with JSON and hand-written paths/status codes
+versus a typed \texttt{.proto} contract, generated stubs, binary protobuf over
+HTTP/2 and a server-streaming call. The gRPC version has no HTTP API; the
+contract replaces the table of methods and fields.
+
+\section{Conclusion}
+
+The broker meets all three tasks in both parts. Publishers send to a topic and
+get an id and a time immediately; the background delivery task writes every
+message to every subscriber of the topic, in order. The messages and ids
+survive a restart because the broker writes each topic atomically to disk. The
+token file and the 401/403 (HTTP) and Unauthenticated/PermissionDenied (gRPC)
+answers restrict publishing to known publishers and allowed topics. The
+two-desktop run used two publishers and two subscribers in two languages on two
+computers, and both subscribers received all ten messages in order in each
+part. HTTP and gRPC implement the same architecture with different contracts;
+the gRPC part shows how a typed contract and a server-streaming call replace a
+hand-written REST API and an open HTTP response.
+
+\begin{thebibliography}{9}
+\bibitem{task} Laboratory Work 4: A Message Broker, Network Programming,
+Technical University of Moldova, 2026.
+\bibitem{repo} NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
+branch \texttt{final/labs-2-3-4-2026-11-26}.
+\bibitem{knowledge} NP-Labs, \texttt{Lab4/KNOWLEDGE.md} and
+\texttt{Lab4/README.md}.
+\bibitem{evidence} NP-Labs,
+\texttt{Lab4/evidence/two-desktop-2026-11-26/}.
+\end{thebibliography}
+
+\appendix
+\section{Build and run}
+
+\begin{lstlisting}[style=term,caption={Build and start the HTTP broker and clients.}]
+cd Lab4/part1-http/go
+go build -o broker ./broker
+go build -o publisher ./publisher
+go build -o subscriber ./subscriber
+./broker -addr :8080
+
+dotnet run --project Lab4/part1-http/subscriber -- http://192.168.1.41:8080 grades
+dotnet run --project Lab4/part1-http/publisher -- http://192.168.1.41:8080 grades teacher tok-teacher
+\end{lstlisting}
+
+\begin{lstlisting}[style=term,caption={Build and start the gRPC broker and clients.}]
+dotnet run --project Lab4/part2-grpc/broker
+dotnet run --project Lab4/part2-grpc/subscriber -- http://192.168.1.41:5000 grades
+dotnet run --project Lab4/part2-grpc/publisher -- http://192.168.1.41:5000 grades teacher tok-teacher
+
+cd Lab4/part2-grpc/go
+go build -o subscriber ./subscriber
+go build -o publisher ./publisher
+./subscriber 192.168.1.41:5000 grades
+./publisher 192.168.1.41:5000 grades phone tok-phone
+\end{lstlisting}
+
+\clearpage
+\section{Evidence map}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+Evidence & Content \\
+\midrule
+\path{Lab4/evidence/two-desktop-2026-11-26/part1-http/} & HTTP broker log, C\#/Go publisher and subscriber transcripts, auth, restart, persisted messages \\
+\path{Lab4/evidence/two-desktop-2026-11-26/part2-grpc/} & gRPC broker log, C\#/Go publisher and subscriber transcripts, auth, restart, persisted messages \\
+\texttt{Lab4/report/report.pdf} & this report \\
+\bottomrule
+\end{tabularx}
+\caption{Where to find the raw evidence for this report.}
+\end{table}
+
+\end{document}

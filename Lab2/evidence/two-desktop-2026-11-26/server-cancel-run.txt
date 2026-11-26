@@ -1,0 +1,56 @@
+[19:26:34.922] Stock initialized: coffee=31, tea=26, croissant=43
+[19:26:34.932] Started 12 workers
+[19:26:34.947] Listening on 0.0.0.0:5000
+[19:26:56.380] Connection from 192.168.1.22:40932
+[19:26:56.385] Disconnected: 192.168.1.22:40932
+[19:27:14.819] Connection from 192.168.1.22:46560
+[19:27:14.824] Provider identified: 192.168.1.22:46560
+[19:27:16.001] Delivery from 192.168.1.22:46560: coffee=40,tea=40,croissant=40
+[19:27:19.825] Connection from 192.168.1.22:46570
+[19:27:19.829] Connection from 192.168.1.22:46568
+[19:27:19.831] Connection from 192.168.1.22:46590
+[19:27:19.833] Connection from 192.168.1.22:46604
+[19:27:19.836] Connection from 192.168.1.22:46612
+[19:27:19.838] Connection from 192.168.1.22:46626
+[19:27:19.839] Connection from 192.168.1.22:46642
+[19:27:19.839] Connection from 192.168.1.22:46652
+[19:27:19.839] Connection from 192.168.1.22:46654
+[19:27:19.839] Connection from 192.168.1.22:46658
+[19:27:19.840] Connection from 192.168.1.22:46666
+[19:27:19.840] Connection from 192.168.1.22:46682
+[19:27:19.840] Connection from 192.168.1.22:46680
+[19:27:19.841] Connection from 192.168.1.22:46710
+[19:27:19.841] Connection from 192.168.1.22:46708
+[19:27:19.842] Connection from 192.168.1.22:46740
+[19:27:20.838] Order 2 accepted from 192.168.1.22:46590, prep 4000ms
+[19:27:20.840] Order 4 accepted from 192.168.1.22:46612, prep 4000ms
+[19:27:20.840] Order 3 accepted from 192.168.1.22:46604, prep 4000ms
+[19:27:20.841] Order 1 accepted from 192.168.1.22:46568, prep 4000ms
+[19:27:20.841] Order 5 accepted from 192.168.1.22:46570, prep 4000ms
+[19:27:20.843] Order 8 accepted from 192.168.1.22:46642, prep 4000ms
+[19:27:20.846] Order 10 accepted from 192.168.1.22:46654, prep 4000ms
+[19:27:20.847] Order 6 accepted from 192.168.1.22:46626, prep 4000ms
+[19:27:20.847] Order 9 accepted from 192.168.1.22:46680, prep 4000ms
+[19:27:20.848] Order 12 accepted from 192.168.1.22:46652, prep 4000ms
+[19:27:20.852] Order 14 accepted from 192.168.1.22:46708, prep 4000ms
+[19:27:20.854] Order 16 accepted from 192.168.1.22:46740, prep 4000ms
+[19:27:20.855] Order 13 accepted from 192.168.1.22:46682, prep 4000ms
+[19:27:20.855] Order 11 accepted from 192.168.1.22:46666, prep 4000ms
+[19:27:20.855] Order 15 accepted from 192.168.1.22:46710, prep 4000ms
+[19:27:20.856] Order 7 accepted from 192.168.1.22:46658, prep 4000ms
+[19:27:25.038] Order 7 ready for 192.168.1.22:46658
+[19:27:25.040] Order 9 ready for 192.168.1.22:46680
+[19:27:25.040] Order 10 ready for 192.168.1.22:46654
+[19:27:25.041] Order 3 ready for 192.168.1.22:46604
+[19:27:25.041] Order 8 ready for 192.168.1.22:46642
+[19:27:25.042] Order 2 ready for 192.168.1.22:46590
+[19:27:25.042] Order 6 ready for 192.168.1.22:46626
+[19:27:25.042] Order 5 ready for 192.168.1.22:46570
+[19:27:25.043] Order 11 ready for 192.168.1.22:46666
+[19:27:25.043] Order 4 ready for 192.168.1.22:46612
+[19:27:25.044] Order 12 ready for 192.168.1.22:46652
+[19:27:25.044] Order 1 ready for 192.168.1.22:46568
+[19:27:29.010] Order 13 cancelled (client gone); products returned
+[19:27:29.011] Order 14 cancelled (client gone); products returned
+[19:27:29.011] Order 15 cancelled (client gone); products returned
+[19:27:29.012] Order 16 cancelled (client gone); products returned

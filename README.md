@@ -17,13 +17,15 @@ See [Lab2/README.md](./Lab2/README.md). The written report is at
 - Run: `dotnet run --project Server/Server.csproj -- <port>` then `dotnet run --project Client/Client.csproj -- <host> <port> [client|provider]`.
 
 ## Lab 3 — LAN Chat (UDP)
-See [Lab3/README.md](./Lab3/README.md).
+See [Lab3/README.md](./Lab3/README.md). The written report is at
+[Lab3/report/report.pdf](./Lab3/report/report.pdf).
 - `Lab3/csharp`: Chat peer. Run two+ instances: `dotnet run -- <name> <port> [passphrase]`.
 - `Lab3/go`: Go chat peer (stdlib only): `go run . <name> <port> [passphrase]`.
 - Uses broadcast for general channel, unique port for private messages, AES-GCM for secure private messages.
 
 ## Lab 4 — Message Broker (HTTP + gRPC)
-See [Lab4/README.md](./Lab4/README.md).
+See [Lab4/README.md](./Lab4/README.md). The written report is at
+[Lab4/report/report.pdf](./Lab4/report/report.pdf).
 - Part 1 HTTP: `Lab4/part1-http/{broker,publisher,subscriber}`.
 - Part 2 gRPC: `Lab4/part2-grpc/{broker,publisher,subscriber}`.
 - Go: `Lab4/part1-http/go` and `Lab4/part2-grpc/go`.
@@ -66,6 +68,7 @@ start the broker with `http://+:8080/`.
 - Lab 4 HTTP: 202 publish, streamed delivery, multiple publishers (ids 1..N unique) and multiple subscribers, topics list, restart keeps messages and ids, tokens (401/403/202).
 - Lab 4 gRPC: unary publish, server-stream subscribe, topics, restart keeps ids, metadata auth (Unauthenticated/PermissionDenied/ok).
 - Go ports: Lab 2 (server/client), Lab 3 (chat), Lab 4 HTTP and gRPC all build; Go gRPC client works against the C# broker (cross-language bonus).
+- Cross-device, two real desktops (2026-11-26): Lab 2 C# server + 16 Go clients + provider, 16/16 ready; Lab 3 three peers on two computers (C# + Go) with encrypted private messages; Lab 4 HTTP and gRPC with 2 publishers + 2 subscribers on two computers. See each lab's `evidence/two-desktop-2026-11-26/`.
 
 ## Swiss army knife scripts (Lab 1)
 `scripts/` contains two equivalent entry points that drive the whole lab:

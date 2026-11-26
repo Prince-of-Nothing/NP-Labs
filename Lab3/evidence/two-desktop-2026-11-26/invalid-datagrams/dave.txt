@@ -1,0 +1,1 @@
+* Dave joined (private ep 192.168.1.22:41616). Type messages, /msg name text, /users, /quit

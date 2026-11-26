@@ -34,10 +34,11 @@ public class BrokerService : Broker.Broker.BrokerBase
         public string Name;
         public long NextId = 1;
         public List<MessageRec> Messages = new();
-        public List<IServerStreamWriter<Broker.Message>> Subscribers = new();
+        public List<Sub> Subscribers = new();
         public object Lock = new();
     }
-    class DeliveryItem { public MessageRec Msg; }
+    class Sub { public IServerStreamWriter<Broker.Message> Writer = null!; public string Client = "?"; }
+    class DeliveryItem { public MessageRec Msg = null!; }
 
     static void LoadTopics()
     {
@@ -108,7 +109,7 @@ public class BrokerService : Broker.Broker.BrokerBase
             DeliveryQueue.Writer.TryWrite(new DeliveryItem { Msg = msg });
         }
         Persist(topic);
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Publish id={msg.Id} topic={topicName}");
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Publish id={msg.Id} topic={topicName} from {context.Peer}: ok");
         return Task.FromResult(new PublishReply { Id = msg.Id, Topic = msg.Topic, Sender = msg.Sender, Body = msg.Body, Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(msg.Time.ToUniversalTime()) });
     }
 
@@ -116,15 +117,16 @@ public class BrokerService : Broker.Broker.BrokerBase
     {
         if (!ValidTopic(request.Topic)) throw new RpcException(new Status(StatusCode.InvalidArgument, "invalid topic name"));
         var topic = GetOrCreate(request.Topic);
-        lock (topic.Lock) topic.Subscribers.Add(responseStream);
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber added topic={request.Topic}");
+        var me = new Sub { Writer = responseStream, Client = context.Peer };
+        lock (topic.Lock) topic.Subscribers.Add(me);
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber added topic={request.Topic} {context.Peer}");
         try
         {
             await Task.Delay(Timeout.Infinite, context.CancellationToken);
         }
         catch (TaskCanceledException) { }
-        lock (topic.Lock) topic.Subscribers.Remove(responseStream);
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber gone topic={request.Topic}");
+        lock (topic.Lock) topic.Subscribers.Remove(me);
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber gone topic={request.Topic} {context.Peer}");
     }
 
     public override Task<ListTopicsReply> ListTopics(ListTopicsRequest request, ServerCallContext context)
@@ -149,13 +151,13 @@ public class BrokerService : Broker.Broker.BrokerBase
             Topic topic;
             lock (TopicsLock) Topics.TryGetValue(msg.Topic, out topic);
             if (topic == null) continue;
-            List<IServerStreamWriter<Broker.Message>> subs;
-            lock (topic.Lock) subs = new List<IServerStreamWriter<Message>>(topic.Subscribers);
+            List<Sub> subs;
+            lock (topic.Lock) subs = new List<Sub>(topic.Subscribers);
             var m = new Broker.Message { Id = msg.Id, Topic = msg.Topic, Sender = msg.Sender, Body = msg.Body, Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(msg.Time.ToUniversalTime()) };
             foreach (var sub in subs)
             {
-                try { await sub.WriteAsync(m); Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Delivered id={msg.Id} topic={msg.Topic}"); }
-                catch { /* removed later */ }
+                try { await sub.Writer.WriteAsync(m); Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Delivered id={msg.Id} topic={msg.Topic} to {sub.Client}: ok"); }
+                catch { Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Delivery id={msg.Id} topic={msg.Topic} to {sub.Client}: write failed"); }
             }
             lock (topic.Lock) topic.Subscribers.RemoveAll(s => false); // keep; failures handled by Subscribe cancellation? gRPC stream write failure throws; we can't easily detect here. 
         }

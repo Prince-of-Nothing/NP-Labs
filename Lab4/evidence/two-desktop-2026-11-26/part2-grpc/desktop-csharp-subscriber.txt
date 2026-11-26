@@ -1,0 +1,12 @@
+Subscribing to http://192.168.1.41:5000 topic=grades
+[grades] teacher: desktop grpc message 1
+[grades] teacher: desktop grpc message 2
+[grades] teacher: desktop grpc message 3
+[grades] teacher: desktop grpc message 4
+[grades] teacher: desktop grpc message 5
+[grades] phone: linux grpc message 1
+[grades] phone: linux grpc message 2
+[grades] phone: linux grpc message 3
+[grades] phone: linux grpc message 4
+[grades] phone: linux grpc message 5
+[grades] phone: auth ok

@@ -1,0 +1,12 @@
+### no token -> expect Unauthenticated
+Publishing to 192.168.1.41:5000 topic=grades as x. Type lines:
+RPC error: rpc error: code = Unauthenticated desc = missing token
+
+### tok-phone to news -> expect PermissionDenied
+Publishing to 192.168.1.41:5000 topic=news as x. Type lines:
+RPC error: rpc error: code = PermissionDenied desc = topic not allowed
+
+### tok-phone to grades -> expect OK
+Publishing to 192.168.1.41:5000 topic=grades as x. Type lines:
+Published id=11
+

@@ -53,17 +53,21 @@ class Program
         }
 
         string logPath = $"chat-{userName}-{chatPort}.log";
-        logWriter = new StreamWriter(logPath, true) { AutoFlush = true };
+        // FileShare.ReadWrite: a second peer with the same name and port (the duplicate-name case) must
+        // reach the name check and be refused cleanly, not crash because the log file is already open.
+        logWriter = new StreamWriter(new FileStream(logPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
 
         // general socket - EXACTLY like working bcast test
         genSock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         genSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         genSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
         genSock.Bind(new IPEndPoint(IPAddress.Any, chatPort));
+        DisableUdpConnReset(genSock);
 
         // private socket
         privSock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         privSock.Bind(new IPEndPoint(IPAddress.Any, 0));
+        DisableUdpConnReset(privSock);
         var pe = (IPEndPoint)privSock.LocalEndPoint!;
         string localIp = GetLocalIp();
         privEndpoint = $"{localIp}:{pe.Port}";
@@ -132,6 +136,13 @@ class Program
         try { logWriter.Close(); } catch { }
     }
 
+    // On Windows, a datagram sent to a port nobody listens on (a peer that just left) makes the
+    // sender's next ReceiveFrom fail with "connection forcibly closed". Turn that off (SIO_UDP_CONNRESET).
+    static void DisableUdpConnReset(Socket s)
+    {
+        try { s.IOControl(unchecked((int)0x9800000C), new byte[] { 0, 0, 0, 0 }, null); } catch { }
+    }
+
     static string GetLocalIp()
     {
         try
@@ -181,6 +192,10 @@ class Program
         }
         catch { }
         if (!result.Contains(IPAddress.Broadcast)) result.Add(IPAddress.Broadcast);
+        // A broadcast sent out the network card does not come back to the other
+        // peers on this computer; the loopback broadcast does.
+        var loopback = IPAddress.Parse("127.255.255.255");
+        if (!result.Contains(loopback)) result.Add(loopback);
         return result;
     }
 
@@ -394,6 +409,11 @@ class Program
                 // not JSON, or JSON missing/mistyping required fields: drop and log
                 LogDg("DROP", "unknown", "invalid_json", 0);
             }
+            catch (SocketException e) when (e.SocketErrorCode == SocketError.MessageSize)
+            {
+                // datagram bigger than the receive buffer: the OS discards it, we log it
+                LogDg("DROP", "unknown", "too_long", buf.Length);
+            }
             catch (Exception e)
             {
                 if (running) Log($"recvgen error: {e.Message}");
@@ -464,6 +484,10 @@ class Program
             catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
             {
                 LogDg("DROP", "unknown", "invalid_json", 0);
+            }
+            catch (SocketException e) when (e.SocketErrorCode == SocketError.MessageSize)
+            {
+                LogDg("DROP", "unknown", "too_long", buf.Length);
             }
             catch (Exception e)
             {

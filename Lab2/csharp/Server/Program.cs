@@ -178,7 +178,7 @@ namespace CoffeeShop.Server
                     buffer += Encoding.UTF8.GetString(buf, 0, n);
                     if (buffer.Length > MaxMsg * 4)
                     {
-                        SendLine(s, Err("message too long"));
+                        SendError(s, "message too long");
                         HandleDisconnect(s);
                         return;
                     }
@@ -189,7 +189,7 @@ namespace CoffeeShop.Server
                         buffer = buffer.Substring(idx + 1);
                         if (line.Length > MaxMsg)
                         {
-                            SendLine(s, Err("message too long"));
+                            SendError(s, "message too long");
                             continue;
                         }
                         line = line.TrimEnd('\r');
@@ -199,8 +199,7 @@ namespace CoffeeShop.Server
                         catch (Exception e) when (e is InvalidOperationException or FormatException)
                         {
                             // valid JSON of the wrong shape (e.g. a number, or "cmd": 5)
-                            Metrics.Error();
-                            SendLine(s, Err("malformed request"));
+                            SendError(s, "malformed request");
                             Log($"Malformed request from {s.Endpoint}: {line}");
                         }
                         if (s.Closed)
@@ -225,8 +224,7 @@ namespace CoffeeShop.Server
             try { doc = JsonDocument.Parse(line); }
             catch
             {
-                Metrics.Error();
-                SendLine(s, Err("invalid json"));
+                SendError(s, "invalid json");
                 Log($"Invalid input from {s.Endpoint}: {line}");
                 return;
             }
@@ -238,7 +236,7 @@ namespace CoffeeShop.Server
                 {
                     if (cmd != "hello")
                     {
-                        SendLine(s, Err("expected hello first"));
+                        SendError(s, "expected hello first");
                         return;
                     }
                     string role = root.TryGetProperty("role", out var r) ? r.GetString() ?? "client" : "client";
@@ -276,8 +274,7 @@ namespace CoffeeShop.Server
                         HandleDisconnect(s);
                         break;
                     default:
-                        Metrics.Error();
-                        SendLine(s, Err("unknown command"));
+                        SendError(s, "unknown command");
                         Log($"Unknown command from {s.Endpoint}: {cmd}");
                         break;
                 }
@@ -298,7 +295,7 @@ namespace CoffeeShop.Server
             // parse items
             if (!root.TryGetProperty("items", out var itemsEl) || itemsEl.ValueKind != JsonValueKind.Array)
             {
-                SendLine(s, Err("missing items")); return;
+                SendError(s, "missing items"); return;
             }
             var items = new Dictionary<string, int>();
             foreach (var it in itemsEl.EnumerateArray())
@@ -307,14 +304,13 @@ namespace CoffeeShop.Server
                 int qty = it.TryGetProperty("qty", out var qe) && qe.TryGetInt32(out var qi) ? qi : 0;
                 if (!Products.Contains(prod) || qty <= 0 || qty > MaxQty)
                 {
-                    Metrics.Error();
-                    SendLine(s, Err($"invalid product or quantity: {prod}"));
+                    SendError(s, $"invalid product or quantity: {prod}");
                     Log($"Invalid order from {s.Endpoint}");
                     return;
                 }
                 items[prod] = items.TryGetValue(prod, out var v) ? v + qty : qty;
             }
-            if (items.Count == 0) { SendLine(s, Err("empty order")); return; }
+            if (items.Count == 0) { SendError(s, "empty order"); return; }
             int tag = root.TryGetProperty("tag", out var te) && te.TryGetInt32(out var tv) ? tv : 0;
 
             // check stock and decrement
@@ -363,19 +359,18 @@ namespace CoffeeShop.Server
         {
             if (!s.IsProvider)
             {
-                Metrics.Error();
-                SendLine(s, Err("only provider can deliver"));
+                SendError(s, "only provider can deliver");
                 Log($"Deliver refused (not provider) from {s.Endpoint}");
                 return;
             }
             if (!root.TryGetProperty("items", out var itemsEl) || itemsEl.ValueKind != JsonValueKind.Array)
-            { SendLine(s, Err("missing items")); return; }
+            { SendError(s, "missing items"); return; }
             var items = new Dictionary<string, int>();
             foreach (var it in itemsEl.EnumerateArray())
             {
                 string prod = it.TryGetProperty("product", out var pe) ? pe.GetString() ?? "" : "";
                 int qty = it.TryGetProperty("qty", out var qe) && qe.TryGetInt32(out var qi) ? qi : 0;
-                if (!Products.Contains(prod) || qty <= 0 || qty > MaxQty) { SendLine(s, Err("invalid product/qty")); return; }
+                if (!Products.Contains(prod) || qty <= 0 || qty > MaxQty) { SendError(s, "invalid product/qty"); return; }
                 items[prod] = items.TryGetValue(prod, out var v) ? v + qty : qty;
             }
             lock (StockLock)
@@ -429,6 +424,8 @@ namespace CoffeeShop.Server
         {
             foreach (var order in OrderQueue.GetConsumingEnumerable())
             {
+                // Already cancelled and refunded while it waited in the queue (see HandleDisconnect).
+                if (Interlocked.CompareExchange(ref order.Claimed, 1, 0) != 0) continue;
                 try
                 {
                     Metrics.Started(order, workerId);
@@ -486,7 +483,22 @@ namespace CoffeeShop.Server
             // cancel orders
             List<Order> toCancel;
             lock (s.Lock) { toCancel = new List<Order>(s.Orders); s.Orders.Clear(); }
-            foreach (var o in toCancel) { try { o.Cts.Cancel(); } catch { } }
+            bool refunded = false;
+            foreach (var o in toCancel)
+            {
+                try { o.Cts.Cancel(); } catch { }
+                // Whoever claims the order first owns it. If we win, no worker ever started it,
+                // so the products go back to the stock right now, not when a worker reaches it.
+                // If a worker already claimed it, that worker stops and refunds (WorkerLoop).
+                if (Interlocked.CompareExchange(ref o.Claimed, 1, 0) == 0)
+                {
+                    lock (StockLock) foreach (var kv in o.Items) Stock[kv.Key] += kv.Value;
+                    Metrics.Finished(o, "cancelled");
+                    Log($"Order {o.Id} cancelled while queued (client gone); products returned");
+                    refunded = true;
+                }
+            }
+            if (refunded) { PersistStock(); CheckAlerts(); }
             // remove from sessions/providers
             lock (SessionsLock)
             {
@@ -498,6 +510,14 @@ namespace CoffeeShop.Server
 
         static object Ok(string msg) => new { type = "ok", msg = msg };
         static object Err(string msg) => new { type = "error", msg = msg };
+
+        // Every error answer is also logged with the client's endpoint (and counted in the metrics).
+        static void SendError(ClientSession s, string msg)
+        {
+            Metrics.Error();
+            Log($"Error to {s.Endpoint}: {msg}");
+            SendLine(s, Err(msg));
+        }
 
         static void SendJson(ClientSession s, object obj)
         {
@@ -550,5 +570,6 @@ namespace CoffeeShop.Server
         public int WorkerId = -1;
         public string Status = "";
         public CancellationTokenSource Cts = new();
+        public int Claimed; // 0 = still queued, 1 = a worker started it or it was cancelled while queued
     }
 }

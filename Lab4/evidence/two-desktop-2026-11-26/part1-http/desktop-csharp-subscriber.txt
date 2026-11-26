@@ -1,0 +1,11 @@
+Subscribing to http://192.168.1.41:8080 topic=grades
+[grades] teacher: desktop message 1
+[grades] teacher: desktop message 2
+[grades] teacher: desktop message 3
+[grades] teacher: desktop message 4
+[grades] teacher: desktop message 5
+[grades] phone: linux message 1
+[grades] phone: linux message 2
+[grades] phone: linux message 3
+[grades] phone: linux message 4
+[grades] phone: linux message 5

@@ -199,6 +199,7 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *Broker) publish(w http.ResponseWriter, r *http.Request, topicName string) {
+	owner := ""
 	if _, err := os.Stat(b.tokensFile); err == nil {
 		auth := r.Header.Get("Authorization")
 		if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
@@ -219,6 +220,7 @@ func (b *Broker) publish(w http.ResponseWriter, r *http.Request, topicName strin
 			log.Printf("Publish forbidden %s topic=%s", r.RemoteAddr, topicName)
 			return
 		}
+		owner = ti.Publisher
 	}
 
 	var in struct {
@@ -235,6 +237,9 @@ func (b *Broker) publish(w http.ResponseWriter, r *http.Request, topicName strin
 	t := b.topic(topicName)
 	t.mu.Lock()
 	msg := Message{ID: t.NextID, Topic: topicName, Sender: in.Sender, Body: in.Body, Time: time.Now().UTC()}
+	if owner != "" {
+		msg.Sender = owner
+	}
 	t.NextID++
 	t.Messages = append(t.Messages, msg)
 	t.mu.Unlock()

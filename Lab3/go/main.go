@@ -142,6 +142,12 @@ func broadcastTargets() []net.IP {
 	if !seen[net.IPv4bcast.String()] {
 		out = append(out, net.IPv4bcast)
 	}
+	// A broadcast sent out the network card does not come back to the other
+	// peers on this computer; the loopback broadcast does.
+	loop := net.IPv4(127, 255, 255, 255)
+	if !seen[loop.String()] {
+		out = append(out, loop)
+	}
 	return out
 }
 

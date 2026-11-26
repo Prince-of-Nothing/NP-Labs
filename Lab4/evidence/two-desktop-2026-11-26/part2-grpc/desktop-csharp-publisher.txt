@@ -1,0 +1,6 @@
+Publishing to http://192.168.1.41:5000 topic=grades as teacher. Type lines:
+Published id=1
+Published id=2
+Published id=3
+Published id=4
+Published id=5

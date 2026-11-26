@@ -1,0 +1,6 @@
+Publishing to http://192.168.1.41:8080 topic=grades as phone. Type lines:
+202 202 Accepted: {"id":6,"topic":"grades","sender":"phone","body":"linux message 1","time":"2026-11-26T17:36:34.1818681Z"}
+202 202 Accepted: {"id":7,"topic":"grades","sender":"phone","body":"linux message 2","time":"2026-11-26T17:36:34.582494Z"}
+202 202 Accepted: {"id":8,"topic":"grades","sender":"phone","body":"linux message 3","time":"2026-11-26T17:36:35.6066173Z"}
+202 202 Accepted: {"id":9,"topic":"grades","sender":"phone","body":"linux message 4","time":"2026-11-26T17:36:35.6181397Z"}
+202 202 Accepted: {"id":10,"topic":"grades","sender":"phone","body":"linux message 5","time":"2026-11-26T17:36:35.8112904Z"}

@@ -1,0 +1,5 @@
+Connected to 192.168.1.41:5000 as client
+Commands: menu | order <product>:<qty> ... | deliver <product>:<qty> ... (provider) | quit
+Order 3 accepted, prep 4000 ms
+Order 3 READY
+[server gone]

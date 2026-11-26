@@ -54,3 +54,13 @@ Lab2/report/*.out
 Lab2/report/*.toc
 Lab2/report/*.synctex.gz
 .report-pages/
+
+# Lab 3/4 report build artifacts
+Lab3/report/*.log
+Lab3/report/*.aux
+Lab3/report/*.out
+Lab3/report/*.toc
+Lab4/report/*.log
+Lab4/report/*.aux
+Lab4/report/*.out
+Lab4/report/*.toc

@@ -145,8 +145,9 @@ The implementation follows the task requirements literally:
 
 The repository contains three implementations of the same protocol: \textbf{C\#}
 (primary, .NET 10), \textbf{Go} and \textbf{Rust}. The C\# and Go versions were
-also exercised between two computers: the server on Windows and the clients on
-an Android phone. The three optional bonuses are covered: two computers, two
+also exercised between two computers: first the server on Windows and the
+clients on an Android phone, then the server on Windows and the clients on a
+CachyOS desktop. The three optional bonuses are covered: two computers, two
 programming languages working together, and a stock that survives a server
 restart.
 
@@ -225,8 +226,8 @@ An order is answered immediately, as the task requires:
 At startup the server reads \texttt{Environment.ProcessorCount} (12 on the test
 machine, 8 physical cores). It starts exactly that many workers. The
 connection threads are the \textbf{producers}: they validate an order, take it
-from the stock at once and put it in a blocking queue of \texttt{Order} objects of
-unbounded/1000 capacity. The workers are the \textbf{consumers}: a free worker
+from the stock at once and put it in an unbounded FIFO blocking queue of
+\texttt{Order} objects. The workers are the \textbf{consumers}: a free worker
 takes the oldest order and simulates preparation by waiting.
 
 The main shared objects and their protection are:
@@ -258,18 +259,22 @@ disconnected would never learn that the shop is almost empty.
 
 \subsection{Disconnects and cancellation}
 
-Every order has a cancellation token. The reader thread notices a closed
-connection when \texttt{Receive} returns 0 or fails with a reset. It then:
-cancels all orders of that client, removes those still in the queue, and wakes
-the worker preparing the current order. The worker stops waiting,
-returns the products to the stock, removes the order from the session and
-continues with the next order. Products that were already ``prepared'' are
+Every order has a cancellation token and a \texttt{Claimed} flag that is 0 while the
+order waits in the queue. The reader thread notices a closed connection when
+\texttt{Receive} returns 0 or fails with a reset. It cancels every order of that
+client and tries to claim each one with an atomic compare-and-exchange. If it wins,
+no worker ever started the order, so the reader thread returns the products to the
+stock \emph{at once}, and a worker that later dequeues the order sees that it is
+claimed and skips it. If a worker had already claimed the order, the worker
+notices the cancelled token within 100~ms, stops, returns the products to the
+stock, removes the order from the session and continues with the next order. Products that were already ``prepared'' are
 lost, as required: the next order waits the full preparation again.
 
 The provider disappearing does not stop the shop. It is removed from the
 provider list, the stock stays as it is, and the server continues to serve
 clients. Every invalid input (unknown command, wrong parameters, too long line,
-random bytes) produces an error answer and never crashes the server.
+random bytes) produces an error answer, is logged with the endpoint of the
+client (\texttt{Error to <endpoint>: <reason>}), and never crashes the server.
 
 \subsection{Metrics and automatic report}
 
@@ -322,6 +327,7 @@ Operating system & Windows 11 IoT Enterprise LTSC, 10.0.26300 \\
 Runtime & .NET 10.0.404; Go 1.27.4; Rust stable \\
 Phone & Android, arm64 Go binaries (Acode/Alpine userland), Wi-Fi 192.168.1.5 \\
 Desktop & Wi-Fi 192.168.1.33 \\
+Second desktop (two-desktop run) & CachyOS Linux 7.3.6, Intel Core i5-10300H, 4 cores / 8 threads, 7.6 GiB RAM, Wi-Fi 192.168.1.22 \\
 \bottomrule
 \end{tabularx}
 \caption{Test environment.}
@@ -492,6 +498,50 @@ two bonuses: two computers and two languages.
 \label{fig:server}
 \end{figure}
 
+\subsection{Two-desktop run}
+
+A second cross-device run used two desktop computers instead of the phone: the
+same C\# server on this Windows desktop (192.168.1.41, 12 workers) and the
+provider plus 16 Go clients on the CachyOS desktop (192.168.1.22). This is the
+strongest form of the two-computer bonus: two real desktops, two languages, raw
+TCP over the LAN.
+
+All 16 orders were accepted and all 16 became ready; none was refused or
+cancelled. Four orders had to wait for a free worker, so the queue behaviour is
+visible again. Table~\ref{tab:twodesktop} summarises the run. The raw server
+CSV/JSON, the 16 client transcripts and the generated charts are in
+\path{Lab2/evidence/two-desktop-2026-11-26/}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+\toprule
+Metric & Value \\
+\midrule
+Workers & 12 \\
+Connections (16 clients + 1 provider) & 17 \\
+Orders accepted / ready / refused / cancelled & 16 / 16 / 0 / 0 \\
+Average queue wait & 1048.5 ms \\
+Maximum queue wait & 4194.4 ms \\
+Average actual preparation & 4213.9 ms \\
+Maximum actual preparation & 4241.5 ms \\
+Throughput & 0.44 orders/s \\
+\bottomrule
+\end{tabularx}
+\caption{Two-desktop run: 16 Go clients on a CachyOS desktop, 12 workers on the Windows desktop.}
+\label{tab:twodesktop}
+\end{table}
+
+Five C\# clients were then run at the same time on the Windows desktop to
+measure the client-side view without queueing: all five were accepted and
+ready, with an average acceptance latency of 9.0 ms, an average wait for
+readiness of 4197.6 ms and an average total time of 4206.4 ms. Finally, a
+disconnect run let the clients quit 8 s after ordering: 12 orders were ready,
+the 4 queued orders were cancelled when their clients left, and the server
+returned their products to the stock and logged each refund. This is the
+Task~4 behaviour with real cross-device clients.
+
 \section{Answers to the control questions}
 
 \begin{description}[style=nextline,leftmargin=0pt,itemsep=3pt]
@@ -514,7 +564,9 @@ two bonuses: two computers and two languages.
     \item[4. Producer--consumer.]
     The producers are the connection threads (commands), the queue is the
     blocking queue of \texttt{Order} objects, and the consumers are the workers. When
-    the queue is empty workers block; when it is full the producers wait.
+    the queue is empty workers block; the queue is unbounded, so producers never
+    wait (they are limited by the stock instead: an order is refused when the
+    stock is empty).
 
     \item[5. Cost of a waiting thread and 1000 clients.]
     A blocked thread costs a stack (about 1 MB of virtual memory) and a context
@@ -543,10 +595,13 @@ two bonuses: two computers and two languages.
     bytes of two answers.
 
     \item[10. Why one worker per CPU core.]
-    The number of workers matches the available logical processors. The
-    preparation is a simulated wait, but the same architecture is used for
-    CPU-bound work; twice as many workers would only add context switches and
-    memory, without more CPU parallelism.
+    The task fixes the capacity of the shop at one worker per logical processor,
+    so the shop prepares at most that many orders at the same time. In this lab a
+    worker only waits, so twice as many workers would cost almost no CPU and
+    would roughly double the throughput, but it would no longer be the shop the
+    task describes: more orders would be prepared at once than the machine has
+    cores. For real CPU-bound preparation more workers than cores would add only
+    context switches and memory, with no more parallelism.
 
     \item[11. How the server knows the provider.]
     It is the connection whose \texttt{hello} role is \texttt{provider}; it is
@@ -558,9 +613,11 @@ two bonuses: two computers and two languages.
     no change is lost. The final stock is the sum of both effects.
 
     \item[13. Which thread sends the alert.]
-    The connection thread that performed the order/delivery (after releasing the
-    stock lock) calls the alert check and writes to every provider; the same
-    method is called for a newly connected provider.
+    The thread that changed the stock (after releasing the stock lock) calls the
+    alert check and writes to every provider: the connection thread after an
+    order or a delivery, a worker or the disconnect handler after a cancelled
+    order returns its products. A newly connected provider gets the current
+    alerts from its own connection thread, right after its \texttt{hello}.
 
     \item[14. How a disappearance is noticed.]
     A graceful close or a reset is noticed immediately by \texttt{Receive}.
@@ -587,11 +644,11 @@ direct socket implementation handles framing, many concurrent clients, a shared
 stock with a lock, a provider with immediate alerts, client disappearance and
 invalid input without crashing. The measurements show the expected FIFO
 behaviour: with more clients than workers the extra orders queue, and the
-per-worker numbers show how the queue is drained. The cross-device run proves
-the protocol between C\# on Windows and Go on Android, and the stock-persistence
-bonus works in both server implementations. The metrics files make the report
-reproducible: the same CSV/JSON files generate the tables and charts after any
-run.
+per-worker numbers show how the queue is drained. The cross-device runs prove
+the protocol between C\# on Windows and Go on Android, and between C\# on
+Windows and Go on a CachyOS desktop; the stock-persistence bonus works in both
+server implementations. The metrics files make the report reproducible: the
+same CSV/JSON files generate the tables and charts after any run.
 
 \begin{thebibliography}{9}
 \bibitem{task} Laboratory Work 2: A Coffee Shop Server, Network Programming,
@@ -619,9 +676,10 @@ The repository also has a one-command build for all labs: run
 C\# projects and builds the Go/Rust binaries, including the phone arm64
 binaries, under \texttt{dist/}.
 
+\clearpage
 \section{Evidence map}
 
-\begin{table}[h]
+\begin{table}[!ht]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l X@{}}
@@ -629,6 +687,7 @@ binaries, under \texttt{dist/}.
 Evidence & Content \\
 \midrule
 \path{Lab2/evidence/cross-device-2026-11-26/} & 16 Go clients on a phone + C\# server: transcripts, server metrics, charts, report \\
+\path{Lab2/evidence/two-desktop-2026-11-26/} & 16 Go clients on a CachyOS desktop + 5 C\# clients + disconnect run: transcripts, server/client metrics, charts \\
 \texttt{Lab2/evidence/stock-persistence-2026-11-26/} & C\# and Go restart tests with before/after stock and logs \\
 \texttt{Lab2/evidence/.../desktop-csharp-clients-metrics/} & five simultaneous C\# clients, per-process client metrics and merged report \\
 \texttt{Lab2/report/report.pdf} & this report (same formatting as Lab 1) \\

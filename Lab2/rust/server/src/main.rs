@@ -69,6 +69,12 @@ fn chrono_like() -> String {
     format!("{}", d.as_secs())
 }
 
+// Answers with an error message and logs it with the client's endpoint.
+fn send_err(s: &Arc<Session>, msg: &str) {
+    log(&format!("Error to {}: {}", s.endpoint, msg));
+    send_line(s, &json!({"type":"error","msg":msg}));
+}
+
 fn send_line(s: &Arc<Session>, v: &Value) {
     if s.closed.load(Ordering::SeqCst) { return; }
     let mut line = v.to_string();
@@ -144,7 +150,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
             return;
         }
         if line.len() > 4096 {
-            send_line(&s, &json!({"type":"error","msg":"message too long"}));
+            send_err(&s, "message too long");
             continue;
         }
         let trimmed = line.trim_end_matches('\n').trim_end_matches('\r').trim().to_string();
@@ -153,7 +159,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
         let v: Value = match serde_json::from_str(&trimmed) {
             Ok(v) => v,
             Err(_) => {
-                send_line(&s, &json!({"type":"error","msg":"invalid json"}));
+                send_err(&s, "invalid json");
                 log(&format!("Invalid input from {}", s.endpoint));
                 continue;
             }
@@ -162,7 +168,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
 
         if !identified {
             if cmd != "hello" {
-                send_line(&s, &json!({"type":"error","msg":"expected hello first"}));
+                send_err(&s, "expected hello first");
                 continue;
             }
             let role = v.get("role").and_then(|x| x.as_str()).unwrap_or("client");
@@ -196,7 +202,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
                 // parse items
                 let items_arr = match v.get("items").and_then(|x| x.as_array()) {
                     Some(a) => a,
-                    None => { send_line(&s, &json!({"type":"error","msg":"missing items"})); continue; }
+                    None => { send_err(&s, "missing items"); continue; }
                 };
                 let mut items: HashMap<String, i32> = HashMap::new();
                 let mut invalid = false;
@@ -207,7 +213,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
                     *items.entry(prod).or_insert(0) += qty;
                 }
                 if invalid || items.is_empty() {
-                    send_line(&s, &json!({"type":"error","msg":"invalid product or quantity"}));
+                    send_err(&s, "invalid product or quantity");
                     log(&format!("Invalid order from {}", s.endpoint));
                     continue;
                 }
@@ -250,12 +256,12 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
             "deliver" => {
                 let is_prov = *s.is_provider.lock().unwrap();
                 if !is_prov {
-                    send_line(&s, &json!({"type":"error","msg":"only provider can deliver"}));
+                    send_err(&s, "only provider can deliver");
                     log(&format!("Deliver refused (not provider) from {}", s.endpoint));
                     continue;
                 }
                 let items_arr = match v.get("items").and_then(|x| x.as_array()) {
-                    Some(a) => a, None => { send_line(&s, &json!({"type":"error","msg":"missing items"})); continue; }
+                    Some(a) => a, None => { send_err(&s, "missing items"); continue; }
                 };
                 let mut items: HashMap<String, i32> = HashMap::new();
                 let mut invalid = false;
@@ -265,7 +271,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
                     if !PRODUCTS.contains(&prod.as_str()) || qty <= 0 { invalid = true; break; }
                     *items.entry(prod).or_insert(0) += qty;
                 }
-                if invalid || items.is_empty() { send_line(&s, &json!({"type":"error","msg":"invalid product or quantity"})); continue; }
+                if invalid || items.is_empty() { send_err(&s, "invalid product or quantity"); continue; }
                 {
                     let mut st = state.stock.lock().unwrap();
                     for (p, q) in &items { *st.get_mut(p).unwrap() += q; }
@@ -280,7 +286,7 @@ fn handle_client(state: Arc<State>, s: Arc<Session>) {
                 return;
             }
             _ => {
-                send_line(&s, &json!({"type":"error","msg":"unknown command"}));
+                send_err(&s, "unknown command");
                 log(&format!("Unknown command from {}: {}", s.endpoint, cmd));
             }
         }

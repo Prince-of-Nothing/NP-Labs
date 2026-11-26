@@ -1,6 +1,8 @@
 # Lab 4 — Message Broker (HTTP + gRPC)
 
 Defense notes and design answers: [KNOWLEDGE.md](./KNOWLEDGE.md).
+Written report: [report/report.pdf](./report/report.pdf) (LaTeX source in
+[report/report.tex](./report/report.tex)).
 
 A message broker between publishers and subscribers. Publishers know only the
 broker; subscribers know only the broker. Two parts, same tasks.
@@ -109,4 +111,21 @@ HTTP: Go broker on the desktop + Go phone and C# desktop publishers/subscribers
 gRPC: C# broker on the desktop + Go phone and C# desktop clients
 (Unauthenticated/PermissionDenied/OK, restart id 12).
 See [Lab4/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+
+
+## Two-desktop evidence (2026-11-26)
+
+The brokers ran on the Windows desktop (192.168.1.41) and the clients on both
+desktops. In each part **2 publishers and 2 subscribers** (one C# and one Go
+on each side) exchanged ten messages, ids 1-10, and both subscribers received
+all ten in order:
+
+- **HTTP** (Go broker, 8080): auth 401 + `WWW-Authenticate` / 403 / 202, id 11;
+  restart id 12 with 12 messages persisted.
+- **gRPC** (C# broker, 5000): Unauthenticated / PermissionDenied / OK, id 11;
+  restart id 12 with 12 messages persisted.
+
+With auth on, the stored sender is the token owner. The Go HTTP broker was
+fixed during this run to match the C# behaviour. See
+[Lab4/evidence/two-desktop-2026-11-26/](./evidence/two-desktop-2026-11-26/README.md).
 

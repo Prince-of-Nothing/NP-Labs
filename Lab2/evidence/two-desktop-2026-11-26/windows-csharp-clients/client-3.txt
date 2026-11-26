@@ -1,0 +1,4 @@
+Connected to 127.0.0.1:5000 as client
+Commands: menu | order <product>:<qty> ... | deliver <product>:<qty> ... (provider) | stats | quit
+Order 20 accepted, prep 4000 ms
+Order 20 READY
