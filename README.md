@@ -34,6 +34,19 @@ See [Lab4/README.md](./Lab4/README.md).
 All C# projects target .NET 10 (Lab 1 targets .NET 8). Build with `dotnet build` in each project folder.
 Rust: `cargo build` in server/client. Go: `go build ./...` in server/client.
 
+One command builds and packages everything (C#, Go, Rust, Windows + phone
+arm64) with checksums:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build-all.ps1   # Windows -> dist/
+./scripts/build-all.sh                                           # Linux/macOS -> dist/
+```
+
+## Tutorials
+- [Launch tutorial](./docs/tutorials/01-launch.md) — build, start and reset every lab.
+- [Testing tutorial](./docs/tutorials/02-testing.md) — the defense checklist with expected results.
+- [Screenshots](./docs/tutorials/screenshots/) — real console captures of Labs 2-4.
+
 ## Docker
 `docker compose up --build` brings up labs 2–4. Lab 3 chat uses host networking (Linux/Docker Desktop). Use `docker compose run --rm coffee-client` etc. for interactive.
 

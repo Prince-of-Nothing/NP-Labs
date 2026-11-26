@@ -6,6 +6,8 @@ target/
 *.exe
 __pycache__/
 *.pyc
+dist/
+.screenshots/
 
 # Lab 2/3/4 runtime data
 broker-data/
