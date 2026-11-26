@@ -12,7 +12,6 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
-\usepackage{tcolorbox}
 \usepackage{enumitem}
 \usepackage{microtype}
 \usepackage{caption}
@@ -26,24 +25,19 @@
 \definecolor{primary}{RGB}{18,52,86}
 \definecolor{secondary}{RGB}{41,128,185}
 \definecolor{accent}{RGB}{231,76,60}
-\definecolor{codebg}{RGB}{247,249,250}
-\definecolor{codeframe}{RGB}{209,213,219}
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{180,180,180}
 \definecolor{codegreen}{RGB}{39,136,60}
-\definecolor{codegray}{RGB}{108,117,125}
+\definecolor{codegray}{RGB}{90,90,90}
 
-\hypersetup{
-    colorlinks=true,
-    linkcolor=primary,
-    urlcolor=secondary,
-    citecolor=secondary
-}
+\hypersetup{hidelinks}
 
 \lstdefinestyle{code}{
     backgroundcolor=\color{codebg},
     basicstyle=\small\ttfamily,
-    keywordstyle=\color{secondary}\bfseries,
-    stringstyle=\color{codegreen},
-    commentstyle=\color{codegray}\itshape,
+    keywordstyle=\bfseries,
+    stringstyle=\itshape,
+    commentstyle=\itshape\color{codegray},
     numbers=left,
     numberstyle=\tiny\color{codegray},
     numbersep=8pt,
@@ -65,10 +59,10 @@
     captionpos=b
 }
 \lstdefinestyle{term}{
-    backgroundcolor=\color{black},
-    basicstyle=\small\ttfamily\color{white},
-    frame=none,
-    numbers=none,
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    frame=single,
+    rulecolor=\color{codeframe},
     breaklines=true,
     showstringspaces=false,
     captionpos=b
@@ -85,8 +79,7 @@
 \newcommand{\studentgroup}{FAF-241}
 
 \begin{document}
-\sloppy
-\setlength{\emergencystretch}{3em}
+\setlength{\emergencystretch}{2em}
 
 \begin{titlepage}
     \centering
@@ -315,9 +308,9 @@ quantities reported by the server metrics.
 \begin{tikzpicture}[
   node distance=1.6cm,
   box/.style={draw, rounded corners, minimum width=2.5cm, minimum height=1.0cm,
-              align=center, fill=blue!5},
+              align=center, fill=white},
   server/.style={draw, rounded corners, minimum width=4.0cm, minimum height=2.8cm,
-                 align=center, fill=orange!8},
+                 align=center, fill=gray!10},
   arrow/.style={-{Latex[length=2mm]}, thick}
 ]
 \node[box] (c1) {Client 1\\TCP session};
@@ -470,12 +463,12 @@ id, status) and refreshes \texttt{metrics/server-summary.json} every two
 seconds (connections, accepted/refused/ready/cancelled, deliveries, alerts,
 averages, throughput, per-worker orders and utilisation).
 
-Each C\# client writes one \path{metrics/client-orders-<pid>.csv} and
-\texttt{client-summary-<pid>.json}. The files are per process so several clients
-can run at the same time without fighting over the same file. The Python script
-\texttt{Lab2/scripts/metrics\_report.py} merges all client CSVs with the server
-CSV and produces \texttt{report.md} and SVG charts, without third-party
-libraries.
+Each C\# client writes two files under \path{metrics/}:
+\path{client-orders-<pid>.csv} and \path{client-summary-<pid>.json}. The files
+are per process so several clients can run at the same time without fighting
+over the same file. The Python script \path{Lab2/scripts/metrics_report.py}
+merges all client CSVs with the server CSV and produces \texttt{report.md} and
+SVG charts, without third-party libraries.
 
 \subsection{Stock persistence (bonus)}
 

@@ -12,7 +12,6 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
-\usepackage{tcolorbox}
 \usepackage{enumitem}
 \usepackage{microtype}
 \usepackage{caption}
@@ -25,17 +24,17 @@
 
 \definecolor{primary}{RGB}{18,52,86}
 \definecolor{secondary}{RGB}{41,128,185}
-\definecolor{codebg}{RGB}{247,249,250}
-\definecolor{codeframe}{RGB}{209,213,219}
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{180,180,180}
 \definecolor{codegreen}{RGB}{39,136,60}
-\definecolor{codegray}{RGB}{108,117,125}
+\definecolor{codegray}{RGB}{90,90,90}
 
-\hypersetup{colorlinks=true,linkcolor=primary,urlcolor=secondary,citecolor=secondary}
+\hypersetup{hidelinks}
 
 \lstdefinestyle{code}{
     backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    keywordstyle=\color{secondary}\bfseries, stringstyle=\color{codegreen},
-    commentstyle=\color{codegray}\itshape, numbers=left,
+    keywordstyle=\bfseries, stringstyle=\itshape,
+    commentstyle=\itshape\color{codegray}, numbers=left,
     numberstyle=\tiny\color{codegray}, numbersep=8pt, frame=single,
     rulecolor=\color{codeframe}, breaklines=true, breakatwhitespace=true,
     showstringspaces=false, tabsize=4, captionpos=b
@@ -46,9 +45,9 @@
     showstringspaces=false, captionpos=b
 }
 \lstdefinestyle{term}{
-    backgroundcolor=\color{black}, basicstyle=\small\ttfamily\color{white},
-    frame=none, numbers=none, breaklines=true, showstringspaces=false,
-    captionpos=b
+    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
+    frame=single, rulecolor=\color{codeframe}, breaklines=true,
+    showstringspaces=false, captionpos=b
 }
 
 \pagestyle{fancy}
@@ -62,8 +61,7 @@
 \newcommand{\studentgroup}{FAF-241}
 
 \begin{document}
-\sloppy
-\setlength{\emergencystretch}{3em}
+\setlength{\emergencystretch}{2em}
 
 \begin{titlepage}
     \centering
@@ -297,7 +295,7 @@ which is why a random nonce is acceptable in this design.
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-  peer/.style={draw, rounded corners, fill=blue!5, minimum width=2.7cm,
+  peer/.style={draw, rounded corners, fill=white, minimum width=2.7cm,
                minimum height=1.1cm, align=center},
   link/.style={thick, <->},
   priv/.style={thick, dashed, <->},
@@ -307,7 +305,7 @@ which is why a random nonce is acceptable in this design.
 \node[peer, right=of alice] (bob) {Bob\\Go peer};
 \node[peer, below=1.6cm of bob] (cara) {Cara\\C\# peer};
 \node[draw, dashed, rounded corners, above=1.0cm of bob, minimum width=6.2cm,
-      align=center, fill=gray!5] (lan)
+      align=center, fill=gray!10] (lan)
       {Wi-Fi LAN 192.168.1.0/24\\chat port 25565/UDP};
 \draw[link] (alice) -- node[above, font=\scriptsize]{broadcast} (bob);
 \draw[link] (bob) -- node[right, font=\scriptsize]{broadcast} (cara);

@@ -48,6 +48,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build-all.ps1   # Windows -> di
 ## Tutorials
 - [Launch tutorial](./docs/tutorials/01-launch.md) — build, start and reset every lab.
 - [Testing tutorial](./docs/tutorials/02-testing.md) — the defense checklist with expected results.
+- [Requirements matrix](./docs/requirements-matrix.md) — Lab 2-4 requirements, status and evidence.
 - [Screenshots](./docs/tutorials/screenshots/) — real console captures of Labs 2-4.
 
 ## Docker
