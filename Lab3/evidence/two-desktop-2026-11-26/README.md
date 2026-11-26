@@ -4,9 +4,9 @@ Three peers on two computers, all on the same Wi-Fi network:
 
 | Peer | Device | IP | Implementation | Role |
 |---|---|---|---|---|
-| Cara | Windows desktop `DESKTOP-8MKK1R0` | 192.168.1.41 | C# / .NET 10 | one peer |
-| Alice | CachyOS desktop `Cupcake` | 192.168.1.22 | Go 1.27.4 | peer on the shared port |
-| Bob | CachyOS desktop `Cupcake` | 192.168.1.22 | Go 1.27.4 | second peer on the same shared port |
+| Cara | Windows desktop `DESKTOP-8MKK1R0` (Dinu Plesu) | 192.168.1.41 | C# / .NET 10 | one peer |
+| Alice | Igor Boltunov's CachyOS desktop `Cupcake` | 192.168.1.22 | Go 1.27.4 | peer on the shared port |
+| Bob | Igor Boltunov's CachyOS desktop `Cupcake` | 192.168.1.22 | Go 1.27.4 | second peer on the same shared port |
 
 Chat port: **25565/UDP** (same for all peers), passphrase: `secret`.
 

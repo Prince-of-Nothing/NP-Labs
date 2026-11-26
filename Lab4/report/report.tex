@@ -16,6 +16,7 @@
 \usepackage{enumitem}
 \usepackage{microtype}
 \usepackage{caption}
+\usepackage{float}
 \usepackage{hyperref}
 
 \definecolor{primary}{RGB}{18,52,86}
@@ -49,7 +50,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small Network Programming --- Laboratory Work 4}
-\fancyhead[R]{\small Dinu Plesu, FAF-241}
+\fancyhead[R]{\small D. Plesu, I. Boltunov, FAF-241}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
@@ -72,14 +73,15 @@
     {\LARGE \textbf{A Message Broker:\\ HTTP Streaming and gRPC}}\\[0.4cm]
     {\large Course: Network Programming}\\[2.5cm]
 
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.52\textwidth}
         \flushleft
-        \textbf{Author:}\\
+        \textbf{Authors:}\\
         Dinu \textsc{Plesu}\\
-        Student of group: \studentgroup
+        Igor \textsc{Boltunov}\\
+        Student group: \studentgroup
     \end{minipage}
     \hfill
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.40\textwidth}
         \flushright
         \textbf{Verified by:}\\
         Lecturer / Supervisor\\
@@ -118,6 +120,9 @@ in C\# and \texttt{net/http} in Go, with no web framework. Part 2 uses
 \texttt{Grpc.AspNetCore} in C\# and \texttt{google.golang.org/grpc} in Go, with
 one shared \texttt{broker.proto}. All three tasks (publish and deliver,
 restart, strangers/tokens) are implemented in both parts.
+
+The two-desktop verification was done together with Igor Boltunov (FAF-241),
+who provided the CachyOS desktop.
 
 \section{Architecture}
 
@@ -254,27 +259,28 @@ ids, exactly as in Part 1.
 
 \subsection{Environment and topology}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l X@{}}
 \toprule
-Component & Value used for the measurements \\
+Role / owner & Machine and environment \\
 \midrule
-Desktop A (Windows) & HP OMEN, Intel Core i5-13420H, 8 cores / 12 threads, 16 GB RAM, Windows 11 IoT Enterprise LTSC 10.0.26300, .NET 10, Go 1.27.4 \\
-Desktop B (Linux) & CachyOS, Linux 7.3.6-1, Intel Core i5-10300H, 4 cores / 8 threads, 7.6 GiB RAM, Go 1.27.4 \\
-Network & same Wi-Fi subnet; A = 192.168.1.41, B = 192.168.1.22 \\
-HTTP broker & Go, port 8080, on desktop A \\
-gRPC broker & C\#, port 5000, on desktop A \\
+Desktop A (Windows) & \textbf{Dinu Plesu}: HP OMEN 16-wd0xxx; Windows 11 IoT Enterprise LTSC 10.0.26300, 64-bit; Intel Core i5-13420H, 8 cores / 12 threads, 2.1 GHz; 16 GB DDR5-5600; Samsung 990 PRO 2 TB NVMe + Realtek RTL9210 512 GB external NVMe; NVIDIA GeForce RTX 4050 Laptop + Intel UHD; Wi-Fi 6E, 192.168.1.41 \\
+Desktop B (Linux) & \textbf{Igor Boltunov}: CachyOS, kernel 7.3.6-1-cachyos, x86-64; Intel Core i5-10300H, 4 cores / 8 threads, 2.5--4.5 GHz; 7.6 GiB RAM; Micron 2210 512 GB NVMe + WDC WD5000LPVX 500 GB HDD; NVIDIA GeForce GTX 1650 Mobile / Max-Q + Intel UHD; Wi-Fi 6, 192.168.1.22 \\
+Network & same Wi-Fi subnet, 192.168.1.0/24 \\
+HTTP broker & Go, port 8080, on Dinu's Windows desktop \\
+gRPC broker & C\#, port 5000, on Dinu's Windows desktop \\
+Runtimes & .NET 10.0.404; Go 1.27.4; Rust 1.99.1; Python 3.15.2 / 3.14.10 \\
 \bottomrule
 \end{tabularx}
-\caption{Two-desktop test environment.}
+\caption{Two-desktop test environment: both authors' machines.}
 \end{table}
 
 For each part, two publishers and two subscribers ran at the same time: one
-C\# publisher and one C\# subscriber on Windows, and one Go publisher and one
-Go subscriber on Linux. The brokers ran on Windows. Both subscribers opened
-their stream before the publishers started.
+C\# publisher and one C\# subscriber on Dinu's Windows desktop, and one Go
+publisher and one Go subscriber on Igor's CachyOS desktop. The brokers ran on
+Windows. Both subscribers opened their stream before the publishers started.
 
 \subsection{Part 1: HTTP results}
 

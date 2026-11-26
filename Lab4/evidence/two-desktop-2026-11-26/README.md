@@ -1,9 +1,10 @@
 # Lab 4 - two-desktop run (2026-11-26)
 
-Brokers on the Windows desktop (192.168.1.41); publishers and subscribers on
-both desktops. The Linux desktop is `Cupcake` (CachyOS, 192.168.1.22). The
-brokers are on the Windows side because the Linux desktop's UFW drops inbound
-connections by default; all Linux clients connect outbound.
+Brokers on Dinu Plesu's Windows desktop (192.168.1.41); publishers and
+subscribers on both desktops. The Linux desktop is Igor Boltunov's `Cupcake`
+(CachyOS, 192.168.1.22). The brokers are on the Windows side because the Linux
+desktop's UFW drops inbound connections by default; all Linux clients connect
+outbound.
 
 For each part: **2 publishers and 2 subscribers** at the same time, one C# and
 one Go on each side. Tokens:

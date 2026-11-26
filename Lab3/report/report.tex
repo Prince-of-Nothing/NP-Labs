@@ -16,6 +16,7 @@
 \usepackage{enumitem}
 \usepackage{microtype}
 \usepackage{caption}
+\usepackage{float}
 \usepackage{hyperref}
 
 \definecolor{primary}{RGB}{18,52,86}
@@ -49,7 +50,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small Network Programming --- Laboratory Work 3}
-\fancyhead[R]{\small Dinu Plesu, FAF-241}
+\fancyhead[R]{\small D. Plesu, I. Boltunov, FAF-241}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
@@ -72,14 +73,15 @@
     {\LARGE \textbf{A Local Network Chat:\\ UDP Sockets, Broadcast Discovery, and Encrypted Private Messages}}\\[0.4cm]
     {\large Course: Network Programming}\\[2.5cm]
 
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.52\textwidth}
         \flushleft
-        \textbf{Author:}\\
+        \textbf{Authors:}\\
         Dinu \textsc{Plesu}\\
-        Student of group: \studentgroup
+        Igor \textsc{Boltunov}\\
+        Student group: \studentgroup
     \end{minipage}
     \hfill
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.40\textwidth}
         \flushright
         \textbf{Verified by:}\\
         Lecturer / Supervisor\\
@@ -110,10 +112,10 @@ framework is used.
 
 The report describes the protocol, the two-socket design, discovery and
 keep-alive, private messages, encryption, and the two-desktop verification run
-made on 26 November 2026. In that run two Go peers ran on a CachyOS desktop and
-one C\# peer ran on a Windows desktop, all on the same Wi-Fi network, with three
-peers on two computers. A second local test exercised a duplicate name and
-invalid/oversized datagrams.
+made on 26 November 2026. In that run two Go peers ran on Igor Boltunov's
+CachyOS desktop and one C\# peer ran on Dinu Plesu's Windows desktop, all on the
+same Wi-Fi network, with three peers on two computers. A second local test
+exercised a duplicate name and invalid/oversized datagrams.
 
 \section{Architecture and protocol}
 
@@ -276,28 +278,28 @@ messages with both Linux peers.
 
 \subsection{Environment}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l X@{}}
 \toprule
-Component & Value used for the measurements \\
+Role / owner & Machine and environment \\
 \midrule
-Desktop A (Windows) & HP OMEN, Intel Core i5-13420H, 8 cores / 12 threads, 16 GB RAM, Windows 11 IoT Enterprise LTSC 10.0.26300, .NET 10 \\
-Desktop B (Linux) & CachyOS, Linux 7.3.6-1, Intel Core i5-10300H, 4 cores / 8 threads, 7.6 GiB RAM, Go 1.27.4 \\
-Network & same Wi-Fi subnet, 192.168.1.0/24; A = 192.168.1.41, B = 192.168.1.22 \\
+Desktop A (Windows) & \textbf{Dinu Plesu}: HP OMEN 16-wd0xxx; Windows 11 IoT Enterprise LTSC 10.0.26300, 64-bit; Intel Core i5-13420H, 8 cores / 12 threads, 2.1 GHz; 16 GB DDR5-5600; Samsung 990 PRO 2 TB NVMe + Realtek RTL9210 512 GB external NVMe; NVIDIA GeForce RTX 4050 Laptop + Intel UHD; Wi-Fi 6E, 192.168.1.41 \\
+Desktop B (Linux) & \textbf{Igor Boltunov}: CachyOS, kernel 7.3.6-1-cachyos, x86-64; Intel Core i5-10300H, 4 cores / 8 threads, 2.5--4.5 GHz; 7.6 GiB RAM; Micron 2210 512 GB NVMe + WDC WD5000LPVX 500 GB HDD; NVIDIA GeForce GTX 1650 Mobile / Max-Q + Intel UHD; Wi-Fi 6, 192.168.1.22 \\
+Network & same Wi-Fi subnet, 192.168.1.0/24 \\
 Chat port & 25565/UDP (same on all peers) \\
 Passphrase & \texttt{secret} \\
 \bottomrule
 \end{tabularx}
-\caption{Two-desktop test environment.}
+\caption{Two-desktop test environment: both authors' machines.}
 \end{table}
 
-The peers were: \textbf{Cara} (C\#, Windows), \textbf{Alice} and \textbf{Bob}
-(Go, Linux). Alice and Bob ran on the same computer and shared port 25565; the
-third peer ran on the other computer. This exercises both requirements at once:
-several peers on one computer, and at least three peers on at least two
-computers.
+The peers were: \textbf{Cara} (C\#, Dinu's Windows desktop), \textbf{Alice} and
+\textbf{Bob} (Go, Igor's CachyOS desktop). Alice and Bob ran on the same computer
+and shared port 25565; the third peer ran on the other computer. This exercises
+both requirements at once: several peers on one computer, and at least three
+peers on at least two computers.
 
 \subsection{Discovery and the general channel}
 

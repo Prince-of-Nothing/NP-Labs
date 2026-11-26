@@ -73,7 +73,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small Network Programming --- Laboratory Work 2}
-\fancyhead[R]{\small Dinu Plesu, FAF-241}
+\fancyhead[R]{\small D. Plesu, I. Boltunov, FAF-241}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0pt}
@@ -96,14 +96,15 @@
     {\LARGE \textbf{A Coffee Shop Server:\\ TCP Sockets, Worker Threads, and Shared State}}\\[0.4cm]
     {\large Course: Network Programming}\\[2.5cm]
 
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.52\textwidth}
         \flushleft
-        \textbf{Author:}\\
+        \textbf{Authors:}\\
         Dinu \textsc{Plesu}\\
-        Student of group: \studentgroup
+        Igor \textsc{Boltunov}\\
+        Student group: \studentgroup
     \end{minipage}
     \hfill
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.40\textwidth}
         \flushright
         \textbf{Verified by:}\\
         Lecturer / Supervisor\\
@@ -148,9 +149,10 @@ The repository contains three implementations of the same protocol: \textbf{C\#}
 (primary, .NET 10), \textbf{Go} and \textbf{Rust}. The C\# and Go versions were
 also exercised between two computers: first the server on Windows and the
 clients on an Android phone, then the server on Windows and the clients on a
-CachyOS desktop. The three optional bonuses are covered: two computers, two
-programming languages working together, and a stock that survives a server
-restart.
+CachyOS desktop. The two-desktop run was done together with Igor Boltunov
+(FAF-241), who provided the CachyOS desktop. The three optional bonuses are
+covered: two computers, two programming languages working together, and a stock
+that survives a server restart.
 
 \section{Architecture and protocol}
 
@@ -314,28 +316,25 @@ instead.
 
 \subsection{Environment}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l X@{}}
 \toprule
-Component & Value used for the measurements \\
+Role / owner & Machine and environment \\
 \midrule
-CPU & 13th Gen Intel Core i5-13420H, 8 cores, 12 logical processors \\
-RAM & 16 GB (15.7 GiB usable) \\
-Storage & Samsung SSD 990 PRO 2 TB; Realtek RTL9210 NVMe enclosure \\
-Operating system & Windows 11 IoT Enterprise LTSC, 10.0.26300 \\
-Runtime & .NET 10.0.404; Go 1.27.4; Rust stable \\
-Phone & Android, arm64 Go binaries (Acode/Alpine userland), Wi-Fi 192.168.1.5 \\
-Desktop & Wi-Fi 192.168.1.33 \\
-Second desktop (two-desktop run) & CachyOS Linux 7.3.6, Intel Core i5-10300H, 4 cores / 8 threads, 7.6 GiB RAM, Wi-Fi 192.168.1.22 \\
+Server (desktop A) & \textbf{Dinu Plesu}: HP OMEN 16-wd0xxx; Windows 11 IoT Enterprise LTSC 10.0.26300, 64-bit; Intel Core i5-13420H, 8 cores / 12 threads, 2.1 GHz; 16 GB DDR5-5600 (2 $\times$ 8 GB Samsung); Samsung 990 PRO 2 TB NVMe + Realtek RTL9210 512 GB external NVMe; NVIDIA GeForce RTX 4050 Laptop 4 GB + Intel UHD; Wi-Fi 6E (Realtek 8852CE), 192.168.1.41 \\
+Clients (desktop B) & \textbf{Igor Boltunov}: CachyOS Linux, kernel 7.3.6-1-cachyos, x86-64; Intel Core i5-10300H, 4 cores / 8 threads, 2.5--4.5 GHz; 7.6 GiB RAM; Micron 2210 512 GB NVMe + WDC WD5000LPVX 500 GB HDD; NVIDIA GeForce GTX 1650 Mobile / Max-Q + Intel UHD; Wi-Fi 6 (MediaTek MT7921), 192.168.1.22 \\
+Phone (earlier run) & Android, arm64 Go binaries (Acode/Alpine userland), Wi-Fi 192.168.1.5 \\
+Runtimes & .NET 10.0.404; Go 1.27.4; Rust 1.99.1; Python 3.15.2 (Windows) / 3.14.10 (Linux) \\
 \bottomrule
 \end{tabularx}
-\caption{Test environment.}
+\caption{Test environment: both authors' machines.}
 \end{table}
 
-The desktop and the phone are on the same Wi-Fi network. The server was started
-on the desktop; the phone clients connected to \texttt{192.168.1.33:5000}.
+Both desktops are on the same Wi-Fi network. The server was started on Dinu's
+Windows desktop; the earlier phone clients connected to \texttt{192.168.1.33:5000}
+and the two-desktop clients to \texttt{192.168.1.41:5000}.
 
 \subsection{Single client and invalid input}
 
@@ -502,8 +501,8 @@ two bonuses: two computers and two languages.
 \subsection{Two-desktop run}
 
 A second cross-device run used two desktop computers instead of the phone: the
-same C\# server on this Windows desktop (192.168.1.41, 12 workers) and the
-provider plus 16 Go clients on the CachyOS desktop (192.168.1.22). This is the
+same C\# server on Dinu's Windows desktop (192.168.1.41, 12 workers) and the
+provider plus 16 Go clients on Igor's CachyOS desktop (192.168.1.22). This is the
 strongest form of the two-computer bonus: two real desktops, two languages, raw
 TCP over the LAN.
 

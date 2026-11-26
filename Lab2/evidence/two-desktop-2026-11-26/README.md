@@ -2,9 +2,9 @@
 
 Server: **C# / .NET 10 on the Windows desktop** (`DESKTOP-8MKK1R0`,
 192.168.1.41), 12 logical CPUs -> 12 workers. Clients and provider:
-**Go 1.27.4 on the CachyOS desktop** (`Cupcake`, 192.168.1.22). Raw TCP port
-5000, newline-delimited JSON. This is the two-computers + two-languages bonus
-with two real desktop computers.
+**Go 1.27.4 on Igor Boltunov's CachyOS desktop** (`Cupcake`, 192.168.1.22). Raw
+TCP port 5000, newline-delimited JSON. This is the two-computers + two-languages
+bonus with two real desktop computers.
 
 ## Main run
 
