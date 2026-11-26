@@ -47,7 +47,7 @@ For the C# HTTP broker on the LAN, also run once as Administrator:
 start the broker with `http://+:8080/`.
 
 ## Verified behaviour (grade 10 tasks)
-- Lab 2: menu/order/refuse/ready, workers per CPU, race on last item protected (1 accepted, 1 refused), client disconnect cancels order and returns stock, invalid input rejected, low-stock alerts immediate and on provider reconnect, stock survives a server restart (C# bonus).
+- Lab 2: menu/order/refuse/ready, workers per CPU, race on last item protected (1 accepted, 1 refused), client disconnect cancels order and returns stock, invalid input rejected, low-stock alerts immediate and on provider reconnect, stock survives a server restart (C# and Go bonus).
 - Lab 3: peers discover each other (simultaneous and staggered starts), general channel, private encrypted messages, join/leave, `/users`, name uniqueness, invalid datagrams dropped and logged, 500-char limit.
 - Lab 4 HTTP: 202 publish, streamed delivery, multiple publishers (ids 1..N unique) and multiple subscribers, topics list, restart keeps messages and ids, tokens (401/403/202).
 - Lab 4 gRPC: unary publish, server-stream subscribe, topics, restart keeps ids, metadata auth (Unauthenticated/PermissionDenied/ok).

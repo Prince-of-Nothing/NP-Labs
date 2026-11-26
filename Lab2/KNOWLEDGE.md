@@ -139,9 +139,9 @@ reads stdin; console output is serialized so lines do not mix.
 
 - Two computers: the server binds `0.0.0.0`; clients take host/port arguments. ✔
 - Two languages: Rust and Go clients/server included. ✔
-- Stock saved on server restart: implemented in the C# server (`stock-state.json`,
-  atomic temp file + rename, reloaded at startup, saved after every order,
-  delivery and cancellation). ✔
+- Stock saved on server restart: implemented in the C# and Go servers
+  (`stock-state.json`, atomic temp file + rename, reloaded at startup, saved
+  after every order, delivery and cancellation). ✔
 
 ## Cross-device notes (2026-11-26)
 

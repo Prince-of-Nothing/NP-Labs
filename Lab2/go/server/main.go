@@ -38,15 +38,69 @@ type Session struct {
 }
 
 type State struct {
-	stock      map[string]int
-	stockMu    sync.Mutex
-	sessions   []*Session
-	sessMu     sync.Mutex
-	providers  []*Session
-	provMu     sync.Mutex
-	queue      chan *Order
-	nextID     int
-	idMu       sync.Mutex
+	stock       map[string]int
+	stockMu     sync.Mutex
+	stockFileMu sync.Mutex
+	sessions    []*Session
+	sessMu      sync.Mutex
+	providers   []*Session
+	provMu      sync.Mutex
+	queue       chan *Order
+	nextID      int
+	idMu        sync.Mutex
+}
+
+// Bonus: stock survives a restart (atomic temp file + rename).
+const stockStatePath = "stock-state.json"
+
+func (s *State) saveStock() {
+	s.stockFileMu.Lock()
+	defer s.stockFileMu.Unlock()
+	s.stockMu.Lock()
+	snap := map[string]int{}
+	for _, p := range products {
+		snap[p] = s.stock[p]
+	}
+	s.stockMu.Unlock()
+	b, err := json.MarshalIndent(snap, "", "  ")
+	if err != nil {
+		logMsg("Stock persist error: " + err.Error())
+		return
+	}
+	tmp := stockStatePath + ".tmp"
+	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+		logMsg("Stock persist error: " + err.Error())
+		return
+	}
+	if err := os.Rename(tmp, stockStatePath); err != nil {
+		logMsg("Stock persist error: " + err.Error())
+	}
+}
+
+func (s *State) loadStock() bool {
+	b, err := os.ReadFile(stockStatePath)
+	if err != nil {
+		return false
+	}
+	var data map[string]int
+	if err := json.Unmarshal(b, &data); err != nil {
+		logMsg("Stock load failed (" + err.Error() + "); starting with a random stock")
+		return false
+	}
+	clean := map[string]int{}
+	for _, p := range products {
+		v, ok := data[p]
+		if !ok || v < 0 || v > 10_000_000 {
+			return false
+		}
+		clean[p] = v
+	}
+	s.stockMu.Lock()
+	for p, v := range clean {
+		s.stock[p] = v
+	}
+	s.stockMu.Unlock()
+	return true
 }
 
 func logMsg(msg string) {
@@ -181,6 +235,7 @@ func workerLoop(st *State) {
 				st.stock[p] += q
 			}
 			st.stockMu.Unlock()
+			st.saveStock()
 			order.client.mu.Lock()
 			filtered := []*Order{}
 			for _, o := range order.client.orders {
@@ -331,6 +386,7 @@ func handleClient(st *State, sess *Session) {
 				st.stock[p] -= q
 			}
 			st.stockMu.Unlock()
+			st.saveStock()
 
 			st.idMu.Lock()
 			st.nextID++
@@ -385,6 +441,7 @@ func handleClient(st *State, sess *Session) {
 				st.stock[p] += q
 			}
 			st.stockMu.Unlock()
+			st.saveStock()
 			sendJSON(sess, map[string]interface{}{"type": "delivery_ok", "items": items})
 			logMsg(fmt.Sprintf("Delivery from %s", sess.endpoint))
 			st.checkAlerts()
@@ -413,11 +470,16 @@ func main() {
 		stock: map[string]int{},
 		queue: make(chan *Order, 1000),
 	}
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for _, p := range products {
-		st.stock[p] = rng.Intn(41) + 10
+	if st.loadStock() {
+		logMsg(fmt.Sprintf("Stock loaded from %s: %s", stockStatePath, st.stockStr()))
+	} else {
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		for _, p := range products {
+			st.stock[p] = rng.Intn(41) + 10
+		}
+		st.saveStock()
+		logMsg(fmt.Sprintf("Stock initialized: %s", st.stockStr()))
 	}
-	logMsg(fmt.Sprintf("Stock initialized: %s", st.stockStr()))
 	workers := runtime.NumCPU()
 	if workers < 1 {
 		workers = 1

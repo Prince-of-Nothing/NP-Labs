@@ -1,9 +1,12 @@
 ﻿# Lab 2 - stock persistence (bonus), 2026-11-26
 
-C# coffee-shop server on Windows, raw TCP port 5000. The stock is written to
-`stock-state.json` (in the server's working directory) after every change and
-loaded again at startup, so a restart keeps the remaining stock instead of
-rolling a new random 10-50.
+Verified for **both server implementations** (C# and Go) on Windows, raw TCP
+port 5000. The stock is written to `stock-state.json` (in the server's working
+directory) after every change and loaded again at startup, so a restart keeps
+the remaining stock instead of rolling a new random 10-50.
+
+The files in this folder are the **C#** run; the **Go** run is in
+[`go-server/`](./go-server/README.md).
 
 ## Test sequence
 
@@ -49,4 +52,23 @@ rolling a new random 10-50.
 | `summary.json` | machine-readable before/after snapshots and checks |
 | `stock-state-final.json` | the final persisted state file |
 | `stock-test-192.168.1.33.txt` | full test transcript |
+
+## Go server
+
+The same five-step test was run against the Go server, with the same C# client
+cross-language. Numbers:
+
+| Phase | coffee | tea | croissant |
+|---|---:|---:|---:|
+| fresh | 24 | 46 | 30 |
+| after `coffee:1` | 23 | 46 | 30 |
+| after restart | 23 | 46 | 30 |
+| after `deliver tea:5` | 23 | 51 | 30 |
+| after second restart | 23 | 51 | 30 |
+
+All four checks in `go-server/summary.json` are `true`; `go-server/server-2.log`
+shows `Stock loaded from stock-state.json: coffee=23, tea=46, croissant=30`.
+The Go implementation (`saveStock`/`loadStock` in `Lab2/go/server/main.go`)
+uses the same snapshot + temp-file + rename scheme and saves after an accepted
+order, a delivery and a cancellation refund.
 

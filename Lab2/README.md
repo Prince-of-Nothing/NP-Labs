@@ -44,7 +44,7 @@ Server → client: `menu` (stock), `order_accepted` (id, prep ms, tag),
 
 - Stock starts at a random 10–50 per product.
 - Bonus: the stock is saved to `stock-state.json` after every change and loaded
-  again on restart, so a restart does not reset it.
+  again on restart, so a restart does not reset it (C# and Go servers).
 - coffee 4 s, tea 3 s, croissant 2 s per unit.
 - One worker per CPU core; FIFO queue; one whole order per worker.
 - Stock is protected by a lock, so two clients cannot both take the last item.
