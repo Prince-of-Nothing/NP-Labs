@@ -4,6 +4,8 @@ obj/
 target/
 .vs/
 *.exe
+__pycache__/
+*.pyc
 
 # Lab 2/3/4 runtime data
 broker-data/
