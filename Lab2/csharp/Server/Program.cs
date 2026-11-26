@@ -26,6 +26,9 @@ namespace CoffeeShop.Server
         {
             ["coffee"] = 0, ["tea"] = 0, ["croissant"] = 0,
         };
+        // Bonus: the stock survives a server restart. Atomic temp file + rename.
+        const string StockStatePath = "stock-state.json";
+        static readonly object StockFileLock = new();
 
         static readonly object SessionsLock = new();
         static readonly List<ClientSession> Sessions = new();
@@ -51,12 +54,21 @@ namespace CoffeeShop.Server
             if (args.Length < 1) { Console.WriteLine("Usage: Server <port>"); return; }
             int port = int.Parse(args[0]);
 
-            var rng = new Random();
-            lock (StockLock)
+            if (TryLoadStock(out var loaded))
             {
-                foreach (var p in Products) Stock[p] = rng.Next(10, 51);
+                lock (StockLock) foreach (var p in Products) Stock[p] = loaded[p];
+                Log($"Stock loaded from {StockStatePath}: {StockStr()}");
             }
-            Log($"Stock initialized: {StockStr()}");
+            else
+            {
+                var rng = new Random();
+                lock (StockLock)
+                {
+                    foreach (var p in Products) Stock[p] = rng.Next(10, 51);
+                }
+                PersistStock();
+                Log($"Stock initialized: {StockStr()}");
+            }
 
             int workers = Environment.ProcessorCount;
             if (workers < 1) workers = 1;
@@ -99,6 +111,48 @@ namespace CoffeeShop.Server
             lock (StockLock)
             {
                 return string.Join(", ", Products.Select(p => $"{p}={Stock[p]}"));
+            }
+        }
+
+        // Bonus: save/load the stock so a restart does not bring back a random one.
+        static void PersistStock()
+        {
+            try
+            {
+                lock (StockFileLock)
+                {
+                    Dictionary<string, int> snapshot;
+                    lock (StockLock) snapshot = new Dictionary<string, int>(Stock);
+                    string json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
+                    string tmp = StockStatePath + ".tmp";
+                    File.WriteAllText(tmp, json);
+                    File.Move(tmp, StockStatePath, overwrite: true);
+                }
+            }
+            catch (Exception e) { Log($"Stock persist error: {e.Message}"); }
+        }
+
+        static bool TryLoadStock(out Dictionary<string, int> loaded)
+        {
+            loaded = null;
+            try
+            {
+                if (!File.Exists(StockStatePath)) return false;
+                var data = JsonSerializer.Deserialize<Dictionary<string, int>>(File.ReadAllText(StockStatePath));
+                if (data == null) return false;
+                var clean = new Dictionary<string, int>();
+                foreach (var p in Products)
+                {
+                    if (!data.TryGetValue(p, out int v) || v < 0 || v > 10_000_000) return false;
+                    clean[p] = v;
+                }
+                loaded = clean;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Log($"Stock load failed ({e.Message}); starting with a random stock");
+                return false;
             }
         }
 
@@ -279,6 +333,7 @@ namespace CoffeeShop.Server
                 }
                 foreach (var kv in items) Stock[kv.Key] -= kv.Value;
             }
+            PersistStock();
 
             int id;
             lock (IdLock) { id = ++nextOrderId; }
@@ -327,6 +382,7 @@ namespace CoffeeShop.Server
             {
                 foreach (var kv in items) Stock[kv.Key] += kv.Value;
             }
+            PersistStock();
             SendLine(s, new { type = "delivery_ok", items = items });
             Metrics.Delivery();
             Log($"Delivery from {s.Endpoint}: {string.Join(",", items.Select(kv => kv.Key + "=" + kv.Value))}");
@@ -395,6 +451,7 @@ namespace CoffeeShop.Server
                         {
                             foreach (var kv in order.Items) Stock[kv.Key] += kv.Value;
                         }
+                        PersistStock();
                         lock (order.Client.Lock) order.Client.Orders.Remove(order);
                         Metrics.Finished(order, "cancelled");
                         Log($"Order {order.Id} cancelled (client gone); products returned");

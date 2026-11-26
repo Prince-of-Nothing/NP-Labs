@@ -1,0 +1,33 @@
+{
+  "before": {
+    "coffee": 21,
+    "tea": 19,
+    "croissant": 21
+  },
+  "after_order_coffee_1": {
+    "coffee": 20,
+    "tea": 19,
+    "croissant": 21
+  },
+  "after_restart": {
+    "coffee": 20,
+    "tea": 19,
+    "croissant": 21
+  },
+  "after_delivery_tea_5": {
+    "coffee": 20,
+    "tea": 24,
+    "croissant": 21
+  },
+  "after_delivery_restart": {
+    "coffee": 20,
+    "tea": 24,
+    "croissant": 21
+  },
+  "checks": {
+    "order_saved": true,
+    "restart_kept_order": true,
+    "delivery_saved": true,
+    "restart_kept_delivery": true
+  }
+}

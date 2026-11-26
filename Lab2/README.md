@@ -43,6 +43,8 @@ Server → client: `menu` (stock), `order_accepted` (id, prep ms, tag),
 ## Behaviour
 
 - Stock starts at a random 10–50 per product.
+- Bonus: the stock is saved to `stock-state.json` after every change and loaded
+  again on restart, so a restart does not reset it.
 - coffee 4 s, tea 3 s, croissant 2 s per unit.
 - One worker per CPU core; FIFO queue; one whole order per worker.
 - Stock is protected by a lock, so two clients cannot both take the last item.
@@ -106,4 +108,6 @@ docker compose run --rm coffee-provider
 Real run with the server on the Windows desktop and 16 Go clients + provider on
 an Android phone (12 workers, 16 simultaneous clients, 16/16 ready, auth-free
 raw TCP). See [Lab2/evidence/cross-device-2026-11-26/](./evidence/cross-device-2026-11-26/README.md).
+The stock-persistence bonus is verified in
+[Lab2/evidence/stock-persistence-2026-11-26/](./evidence/stock-persistence-2026-11-26/README.md).
 

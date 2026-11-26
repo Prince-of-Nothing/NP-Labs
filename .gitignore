@@ -8,6 +8,7 @@ target/
 # Lab 2/3/4 runtime data
 broker-data/
 tokens.txt
+stock-state.json
 *.log
 chat-*.log
 Lab2/**/metrics/
