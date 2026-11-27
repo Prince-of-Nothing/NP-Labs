@@ -1,302 +1,256 @@
 \documentclass[12pt,a4paper]{article}
 
+% --- Packages (same set and page setup as the Lab 1 report) ---
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage[english]{babel}
-\usepackage[margin=2.5cm]{geometry}
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{enumitem}
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
-\usepackage{enumitem}
+\usepackage[many]{tcolorbox}
 \usepackage{microtype}
-\usepackage{caption}
-\usepackage{float}
-\usepackage{amsmath}
-\usepackage{amssymb}
+\usepackage{amsmath,amssymb}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \usepackage{hyperref}
 
+% --- Colours ---
 \definecolor{primary}{RGB}{18,52,86}
 \definecolor{secondary}{RGB}{41,128,185}
-\definecolor{codebg}{RGB}{248,248,248}
-\definecolor{codeframe}{RGB}{180,180,180}
-\definecolor{codegreen}{RGB}{39,136,60}
-\definecolor{codegray}{RGB}{90,90,90}
+\definecolor{accent}{RGB}{231,76,60}
+\definecolor{codebg}{RGB}{247,249,250}
+\definecolor{codeframe}{RGB}{209,213,219}
+\definecolor{codegray}{RGB}{108,117,125}
+\definecolor{termgreen}{RGB}{80,250,123}
+\definecolor{termred}{RGB}{255,85,85}
+\definecolor{termyellow}{RGB}{241,250,140}
 
-\hypersetup{hidelinks}
+\hypersetup{colorlinks=true,linkcolor=primary,citecolor=secondary,urlcolor=secondary}
 
+% --- Listings ---
 \lstdefinestyle{code}{
-    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    keywordstyle=\bfseries, stringstyle=\itshape,
-    commentstyle=\itshape\color{codegray}, numbers=left,
-    numberstyle=\tiny\color{codegray}, numbersep=8pt, frame=single,
-    rulecolor=\color{codeframe}, breaklines=true, breakatwhitespace=true,
-    showstringspaces=false, tabsize=4, captionpos=b
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{secondary}\bfseries,
+    stringstyle=\itshape,
+    commentstyle=\itshape\color{codegray},
+    numbers=left,
+    numberstyle=\tiny\color{codegray},
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b
 }
 \lstdefinestyle{plain}{
-    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    frame=single, rulecolor=\color{codeframe}, breaklines=true,
-    showstringspaces=false, captionpos=b
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    showstringspaces=false,
+    captionpos=b
 }
 \lstdefinestyle{term}{
-    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    frame=single, rulecolor=\color{codeframe}, breaklines=true,
-    showstringspaces=false, captionpos=b
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    showstringspaces=false,
+    captionpos=b
 }
+
+% --- Terminal window (as in the Lab 1 report) ---
+\tcbuselibrary{listings,skins}
+\newtcblisting{terminalwindow}[1][]{%
+    enhanced,
+    colback=black,
+    colframe=black,
+    arc=2.5mm,
+    boxrule=1pt,
+    title={\textcolor{termred}{$\bullet$}\;\textcolor{termyellow}{$\bullet$}\;\textcolor{termgreen}{$\bullet$}\quad \textsf{\bfseries Console Terminal Session}},
+    fonttitle=\small\sffamily\bfseries,
+    coltitle=white,
+    attach boxed title to top left={yshift=-2mm, xshift=4mm},
+    boxed title style={colback=gray!15!black, arc=1.5mm, boxrule=0.5pt},
+    listing only,
+    listing options={
+        backgroundcolor=\color{black},
+        basicstyle=\small\ttfamily\color{white},
+        frame=none,
+        numbers=none,
+        breaklines=true,
+        tabsize=4,
+        showspaces=false,
+        showstringspaces=false,
+        keepspaces=true
+    },
+    #1
+}
+
+% --- Header and footer: page number only, no header rule ---
+\lstset{style=plain}
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small Network Programming --- Laboratory Work 3}
-\fancyhead[R]{\small D. Plesu, I. Boltunov, FAF-241}
+\setlength{\headheight}{15pt}
+\addtolength{\topmargin}{-3pt}
 \fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
 \newcommand{\studentgroup}{FAF-241}
 
 \begin{document}
-\setlength{\emergencystretch}{2em}
 
+% ======================================================================
+% TITLE PAGE
+% ======================================================================
 \begin{titlepage}
-    \centering
-    {\large \textbf{TECHNICAL UNIVERSITY OF MOLDOVA}}\\[0.2cm]
-    {\large Faculty of Computers, Informatics and Microelectronics}\\[0.2cm]
-    {\large Department of Software Engineering and Automatics}\\[0.8cm]
+  \centering
+  {\large \textbf{TECHNICAL UNIVERSITY OF MOLDOVA}}\\[0.2cm]
+  {\large Faculty of Computers, Informatics and Microelectronics}\\[0.2cm]
+  {\large Department of Software Engineering and Automatics}\\[0.8cm]
 
-    \includegraphics[width=3.5cm]{figures/utm_logo.png}\\[1.2cm]
+  \includegraphics[width=3.5cm]{figures/utm_logo.png}\\[1.2cm]
 
-    {\Large \textbf{LABORATORY WORK NO. 3}}\\[0.4cm]
-    {\LARGE \textbf{A Local Network Chat:\\ UDP Sockets, Broadcast Discovery, and Encrypted Private Messages}}\\[0.4cm]
-    {\large Course: Network Programming}\\[2.5cm]
+  {\Large \textbf{LABORATORY WORK NO. 3}}\\[0.4cm]
+  {\LARGE \textbf{A Local Network Chat:\\ UDP Sockets, Broadcast Discovery, and Encrypted Private Messages}}\\[0.5cm]
+  {\large Course: Network Programming}\\[2.5cm]
 
-    \begin{minipage}{0.52\textwidth}
-        \flushleft
-        \textbf{Authors:}\\
-        Dinu \textsc{Plesu}\\
-        Igor \textsc{Boltunov}\\
-        Student group: \studentgroup
-    \end{minipage}
-    \hfill
-    \begin{minipage}{0.40\textwidth}
-        \flushright
-        \textbf{Verified by:}\\
-        Lecturer / Supervisor\\
-        Fistic Cristofor
-    \end{minipage}
+  \begin{minipage}{0.52\textwidth}
+    \flushleft
+    \textbf{Authors:}\\
+    Dinu \textsc{Plesu}\\
+    Igor \textsc{Boltunov}\\
+    Student group: \studentgroup
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.40\textwidth}
+    \flushright
+    \textbf{Verified by:}\\
+    Lecturer / Supervisor\\
+    Fistic Cristofor
+  \end{minipage}
 
-    \vfill
-    {\large Chi\c{s}in\u{a}u --- 2026}
+  \vfill
+  {\large Chi\c{s}in\u{a}u --- 2026}
 \end{titlepage}
 
-\newpage
-\begin{abstract}
-\noindent
-This report presents the design, implementation, and experimental evaluation of a
-serverless local-network chat built directly on UDP sockets. The system uses one
-program per peer, two sockets per peer (a shared broadcast socket and a unique
-private socket), JSON datagrams, broadcast-based discovery with heartbeats, and
-AES-256-GCM encryption with PBKDF2 key derivation for private messages. Two
-independent implementations, in C\# and Go, interoperate on the wire. The
-evaluation uses three peers on two desktop computers on the same Wi-Fi network.
-All peers discover each other within about one second; general messages reach
-every peer exactly once; private messages reach only their receiver and are
-encrypted on the wire; duplicate names are refused; and invalid, oversized, and
-too-long datagrams are dropped and logged without crashing a peer. The
-experiment also exposes a practical limitation of IPv4 broadcast: a datagram
-sent through the network card does not return to the other sockets on the same
-host. The implementation addresses this by also sending to the loopback
-broadcast address, a design decision that is analysed in the report. The
-results are discussed together with their threats to validity and directions
-for future work.
-\end{abstract}
-
-\noindent\textbf{Keywords:} UDP, broadcast, peer-to-peer, local-area network,
-socket programming, AES-GCM, PBKDF2, network measurement.
-
-\newpage
 \tableofcontents
 \newpage
 
+% ======================================================================
 \section{Introduction}
+% ======================================================================
+A local-area chat is a small distributed-systems problem. Without a server it
+needs service discovery, group messaging, unique names, failure detection and
+confidential messages, and every peer may start, stop or vanish at any time.
+The transport makes this harder. UDP sends independent datagrams with no
+delivery, ordering or duplicate guarantees, so the application has
+to define its own message format, discovery protocol, liveness rules and security
+model.
 
-\subsection{Motivation and problem statement}
+The laboratory asks for one program, using the UDP socket API directly, that
+implements four tasks. Table~\ref{tab:tasks} maps each task to the sections below.
+The work also requires two peers in different languages to interoperate.
 
-Local-area chat is a compact but demanding distributed-systems problem. It
-combines service discovery without a central directory, group communication,
-unique naming, failure detection, and confidential messaging. A client--server
-design can delegate these concerns to one process; a serverless design must
-solve them among equal peers that may start, stop, or disappear at any time.
-The problem becomes harder because the transport is UDP, which offers a
-connectionless datagram service without delivery, ordering, or duplicate
-suppression guarantees \cite{rfc768}. The application must therefore define its
-own message format, discovery protocol, liveness rules, and security model.
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X l@{}}
+\toprule
+\textbf{Task} & \textbf{Goal} & \textbf{Section} \\
+\midrule
+1. General channel & one datagram reaches every peer, including peers that share a port on one computer & \ref{sec:task1} \\
+2. Who is online & peers find each other without a server; unique names; leave and timeout & \ref{sec:task2} \\
+3. Private messages & one peer receives a private message, even when peers share the chat port & \ref{sec:task3} \\
+4. Secure private messages & private messages cannot be read or changed by someone outside the chat & \ref{sec:task4} \\
+\bottomrule
+\end{tabularx}
+\caption{The four tasks of the laboratory and where each one is evaluated.}
+\label{tab:tasks}
+\end{table}
 
-This report studies those mechanisms in a controlled laboratory setting. The
-goal is not to build a feature-rich messenger, but to isolate the minimum
-protocol machinery that makes a local-network chat correct, and to measure how
-it behaves on real hardware.
+% ======================================================================
+\section{Background}
+% ======================================================================
+\textbf{UDP and group communication.} Each \texttt{sendto} produces one datagram,
+delivered independently of the others. IPv4 offers two ways to reach
+many hosts. Broadcast reaches every host on a subnet with no membership, and
+multicast reaches a group that hosts join. Broadcast is simpler
+and suits a single subnet, but access points often filter it. Multicast is more
+selective and needs group management. Zero-configuration discovery uses the
+multicast approach. This work uses broadcast, because the task
+needs one datagram to reach every peer on one subnet.
 
-\subsection{Objectives}
+\textbf{Discovery and failure detection.} A peer without a directory learns the
+membership by announcement: a newcomer broadcasts \texttt{join}, the others answer
+with their identity, and every peer sends periodic heartbeats. UDP gives no
+message identity or ordering, so these are application concepts.
+A peer is considered gone when no heartbeat has been heard for a fixed interval.
+That interval trades detection speed against false removals under loss
+.
 
-The work has six objectives:
-\begin{enumerate}[itemsep=1pt]
-    \item implement one program that acts as a peer, using the UDP socket API
-          directly and no chat, discovery, or messaging library;
-    \item deliver each general-channel message to every peer with one logical
-          datagram, including peers that share a port on the same computer;
-    \item discover peers without a server, enforce unique names, and detect
-          peers that leave or stop responding;
-    \item send a private message to exactly one peer, even when several peers
-          share the public chat port;
-    \item protect private messages with a key derived from a shared passphrase,
-          so that an observer outside the chat cannot read or undetectably
-          modify them;
-    \item provide two interoperable implementations (C\# and Go) and evaluate
-          them on two desktop computers.
-\end{enumerate}
+\textbf{Confidential messaging.} A checksum does not provide confidentiality. The
+design uses PBKDF2-HMAC-SHA256 to derive a 256-bit key from a passphrase
+, and AES-256-GCM to encrypt and authenticate each message
+. GCM detects tampering and a wrong key through its tag. The
+nonce must never repeat under one key, so every message gets a fresh random
+96-bit nonce. A shared passphrase protects the chat from outsiders, but it does
+not separate members: anyone who knows it can read every private message.
 
-\subsection{Contributions}
+% ======================================================================
+\section{Design}
+% ======================================================================
+\subsection{Model and parameters}
+Each peer $p$ has a general endpoint $(\mathrm{IP}_p,\mathrm{port}_{\mathrm{chat}})$
+and a private endpoint $(\mathrm{IP}_p,\mathrm{port}_p)$, where $\mathrm{port}_p$ is
+an ephemeral port unique to that peer. The general channel is one broadcast
+datagram per message. A private message is a unicast datagram to the private
+endpoint of one receiver.
 
-The main contributions of this work are:
-\begin{itemize}[itemsep=1pt]
-    \item a two-socket peer architecture that separates the shared general
-          channel from a unique private endpoint;
-    \item a broadcast discovery protocol with immediate \texttt{hello} replies,
-          periodic heartbeats, and a 15-second failure timeout;
-    \item an authenticated-encryption design based on PBKDF2-HMAC-SHA256 and
-          AES-256-GCM with a fresh nonce per message;
-    \item two independent implementations that agree on the wire format and
-          interoperate, including encrypted private messages;
-    \item a two-desktop measurement study that identifies and fixes a practical
-          IPv4 loopback-broadcast limitation for peers on the same host.
-\end{itemize}
-
-\subsection{Organization}
-
-Section~\ref{sec:background} reviews the relevant networking and security
-background. Section~\ref{sec:design} presents the system model and protocol
-design, Section~\ref{sec:implementation} describes the two implementations, and
-Section~\ref{sec:evaluation} reports the experimental evaluation. Section~\ref{sec:design-questions}
-discusses the design questions and control questions, and Section~\ref{sec:conclusion}
-concludes with future work.
-
-\section{Background and Related Work}
-\label{sec:background}
-
-\subsection{UDP and group communication}
-
-UDP exposes a datagram abstraction: each \texttt{sendto} produces one datagram
-that is delivered independently of the others \cite{rfc768}. It does not
-guarantee delivery, ordering, or duplicate suppression, and it does not provide
-connection setup or teardown. These properties are acceptable for a chat that
-values low latency and simplicity, but they shift responsibility for discovery,
-liveness, and message identity to the application.
-
-IPv4 supports two group-communication primitives. Broadcast sends a datagram to
-every host on a subnet, while multicast sends it to a group that hosts join
-\cite{rfc1112}. Broadcast requires no membership protocol, which makes it
-attractive for a small laboratory network, but it is limited to the local subnet
-and is often filtered by Wi-Fi access points. Multicast is more selective and
-can be forwarded by IGMP-aware switches, at the cost of group management.
-Zero-configuration discovery systems such as multicast DNS demonstrate the
-multicast alternative \cite{rfc6762}. This work uses broadcast because the task
-requires a single datagram to reach every peer, and because the laboratory
-network is a single subnet.
-
-\subsection{Peer discovery and failure detection}
-
-A serverless peer must learn the current membership without a directory. The
-classic approach is an announcement protocol: a newcomer broadcasts a
-\texttt{join}, existing peers answer with their identity and endpoint, and every
-peer periodically emits a heartbeat. UDP provides no message identity or
-ordering; these are application-level concepts \cite{lamport}. Failure detection
-is then a timeout problem: a peer is considered gone when no heartbeat has been
-observed for a fixed interval. This is the same trade-off between detection latency and false
-positives that appears in group-membership protocols and in distributed-systems
-textbooks \cite{tanenbaum,kurose}. A short timeout detects failures quickly but
-risks false removals under packet loss; a long timeout is robust but leaves
-stale entries. The chosen values (5-second heartbeats, 15-second timeout) follow
-the laboratory requirement and tolerate two consecutive lost heartbeats.
-
-\subsection{Confidential private messaging}
-
-Confidentiality and integrity for private messages require more than a
-checksum. The design uses PBKDF2-HMAC-SHA256 to derive a 256-bit key from a
-human passphrase \cite{rfc8018}, and AES-256-GCM to encrypt and authenticate
-each message \cite{nistgcm,mcgrew}. GCM is an authenticated-encryption mode: the
-receiver detects both tampering and a wrong key through the authentication tag.
-The nonce must never repeat under the same key, because repetition breaks GCM's
-confidentiality and authenticity guarantees; a fresh random 96-bit nonce is
-therefore generated for every message. A shared passphrase protects the chat
-from an observer outside the group, but it does not distinguish members inside
-the group: anyone who knows the passphrase can decrypt every private message.
-Per-pair keys would require an authenticated key exchange, which is outside the
-scope of the laboratory task.
-
-\subsection{Positioning of this work}
-
-The implementation is intentionally small and pedagogical. It does not attempt
-to replace mature messaging systems or to provide end-to-end secrecy against
-group members. Its value is in making the protocol mechanisms explicit and
-measurable: the wire format, the discovery state machine, the socket-level
-broadcast behaviour, the encryption parameters, and the failure modes are all
-visible in the source and in the captured logs. The two-language requirement
-also provides a compatibility check that a single implementation cannot offer.
-
-\section{System Design}
-\label{sec:design}
-
-\subsection{System model and notation}
-
-Let $P=\{p_1,\ldots,p_n\}$ be the set of peers currently in the chat. Each peer
-$p$ has a public endpoint $e_p=(\mathrm{IP}_p,\mathrm{port}_{\mathrm{chat}})$
-and a private endpoint $\pi_p=(\mathrm{IP}_p,\mathrm{port}_p)$, where
-$\mathrm{port}_p$ is an ephemeral port unique to that peer. The general channel
-is a broadcast relation $G\subseteq P\times M$: a message $m\in M$ is sent once
-to the public endpoint and is received by every peer in $P$. The private
-channel is a unicast relation $U\subseteq P\times P\times M$: a message is sent
-only to $\pi_q$ for one receiver $q\in P$.
-
-The liveness rule is a timeout on the heartbeat interval $T_{\mathrm{hb}}$.
-With heartbeats every $T_{\mathrm{hb}}=5$~s and a removal threshold
-$T_{\mathrm{gone}}=15$~s, a peer tolerates two consecutive lost heartbeats:
+Liveness is a timeout. Heartbeats are sent every $T_{\mathrm{hb}}=5$\,s, and a peer
+is removed after $T_{\mathrm{gone}}=15$\,s of silence:
 \begin{equation}
-T_{\mathrm{gone}} = 3\,T_{\mathrm{hb}}.
+T_{\mathrm{gone}} = 3\,T_{\mathrm{hb}},
 \label{eq:timeout}
 \end{equation}
+so a peer tolerates two consecutive lost heartbeats.
 
-For confidentiality, let $L_p$ be the plaintext length in bytes. AES-GCM adds a
-12-byte nonce and a 16-byte authentication tag, and the JSON transport encodes
-the binary fields in base64, which expands them by a factor of about $4/3$:
+Each encrypted message adds a 12-byte nonce and a 16-byte tag to the plaintext, and
+the JSON transport encodes the binary fields in base64, which expands them by a
+factor of $4/3$:
 \begin{equation}
-L_{\mathrm{wire}} \approx \frac{4}{3}\left(L_p + 12 + 16\right) + L_{\mathrm{hdr}},
+L_{\mathrm{wire}} \approx \tfrac{4}{3}\,(L_p + 12 + 16) + L_{\mathrm{hdr}},
 \label{eq:overhead}
 \end{equation}
-where $L_{\mathrm{hdr}}$ is the JSON header. The 500-character limit therefore
-keeps every datagram well below the IPv4 UDP limit and below the path MTU
-\cite{rfc768}.
-
-The nonce is a fresh 96-bit random value for every message. For $n$ messages
-under one key, the birthday bound gives an upper bound on the probability of at
-least one nonce collision:
+where $L_{\mathrm{hdr}}$ is the JSON header. Random 96-bit nonces collide with a
+probability bounded by the birthday bound. After $n$ messages under one key,
 \begin{equation}
-P_{\mathrm{collision}} \;\le\; \frac{n(n-1)}{2\cdot 2^{96}}.
+P_{\mathrm{collision}} \le \frac{n(n-1)}{2\cdot 2^{96}},
 \label{eq:birthday}
 \end{equation}
-For the message volumes of a laboratory chat this probability is negligible,
-which is why a random nonce is acceptable in this design.
+which is negligible at the message volumes of a laboratory chat.
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
   peer/.style={draw, rounded corners, fill=white, minimum width=2.7cm,
-               minimum height=1.1cm, align=center},
+               minimum height=1.1cm, align=center, font=\small},
   link/.style={thick, <->},
   priv/.style={thick, dashed, <->},
   node distance=2.4cm
@@ -305,311 +259,345 @@ which is why a random nonce is acceptable in this design.
 \node[peer, right=of alice] (bob) {Bob\\Go peer};
 \node[peer, below=1.6cm of bob] (cara) {Cara\\C\# peer};
 \node[draw, dashed, rounded corners, above=1.0cm of bob, minimum width=6.2cm,
-      align=center, fill=gray!10] (lan)
+      align=center, fill=gray!10, font=\small] (lan)
       {Wi-Fi LAN 192.168.1.0/24\\chat port 25565/UDP};
 \draw[link] (alice) -- node[above, font=\scriptsize]{broadcast} (bob);
 \draw[link] (bob) -- node[right, font=\scriptsize]{broadcast} (cara);
 \draw[priv] (alice) -- node[below left, font=\scriptsize]{private} (cara);
 \end{tikzpicture}
-\caption{Two-socket peer design. The public socket carries discovery and the
-general channel; the private socket carries encrypted unicast messages.}
+\caption{Peers on one subnet. Discovery and the general channel use broadcast on
+the chat port; private messages are unicast to each peer's own endpoint.}
 \label{fig:architecture}
 \end{figure}
 
-\subsection{One program, two sockets}
-
-Every peer creates two UDP sockets:
-
+\subsection{Two sockets per peer}
+Each peer opens two UDP sockets:
 \begin{itemize}[itemsep=2pt]
-    \item \textbf{general socket}: bound to \texttt{0.0.0.0:<chatPort>}, with
-          address/port reuse so that several peers can share the port on one
-          computer. It sends and receives the general channel and the discovery
-          messages.
-    \item \textbf{private socket}: bound to \texttt{0.0.0.0:0}, which gives a
-          unique ephemeral port. It receives private messages addressed to this
-          peer only.
+  \item the \textbf{general socket}, bound to \texttt{0.0.0.0:<chatPort>} with
+        address reuse, so that several peers can share the port on one computer.
+        It sends and receives the general channel and the discovery messages;
+  \item the \textbf{private socket}, bound to \texttt{0.0.0.0:0}, which gives a
+        unique ephemeral port. It receives only the private messages addressed to
+        this peer.
 \end{itemize}
-
-The private endpoint (local IP and ephemeral port) is advertised in
-\texttt{join}, \texttt{hello} and \texttt{heartbeat}. A peer never sends a
-private message to the shared chat port, because a unicast datagram to a port
-shared by several sockets reaches only one of them.
+The private endpoint is advertised in \texttt{join}, \texttt{hello} and
+\texttt{heartbeat}. A private message is never sent to the shared chat port,
+because a unicast datagram to a port shared by several sockets reaches only one
+of them.
 
 \subsection{Datagrams}
+Every message is one UDP datagram holding one JSON object (Table~\ref{tab:messages}).
+A general message carries \texttt{from}, \texttt{text} and a per-peer \texttt{id}.
+An encrypted private message carries \texttt{from}, \texttt{to}, and the base64
+nonce, tag and ciphertext.
 
-Every message is one UDP datagram containing one JSON object. Table
-\ref{tab:messages} lists the message types.
-
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l l X@{}}
 \toprule
-Type & Direction & Meaning \\
+\textbf{Type} & \textbf{Direction} & \textbf{Meaning} \\
 \midrule
 \texttt{join} & broadcast & a new peer announces its name and private endpoint \\
 \texttt{hello} & broadcast & an existing peer answers a join \\
-\texttt{heartbeat} & broadcast & ``I am still here'', every 5 s \\
+\texttt{heartbeat} & broadcast & ``still here''; sent every 5\,s \\
 \texttt{bye} & broadcast & the peer leaves with \texttt{/quit} \\
 \texttt{gen} & broadcast & one general-channel message \\
-\texttt{priv} & unicast & one private message (no passphrase) \\
+\texttt{priv} & unicast & one private message in plain text, used when no passphrase is given \\
 \texttt{privenc} & unicast & one encrypted private message \\
-\texttt{nameinuse} & unicast & the name is already taken; the newcomer exits \\
+\texttt{nameinuse} & unicast & the name is taken; the newcomer exits \\
 \bottomrule
 \end{tabularx}
 \caption{Message types of the chat protocol.}
 \label{tab:messages}
 \end{table}
 
-A general message carries \texttt{from}, \texttt{text} and a per-peer
-\texttt{id}. A private encrypted message carries \texttt{from}, \texttt{to},
-the base64 nonce, tag and ciphertext.
+\subsection{Validation and logging}
+Every receive loop validates each datagram. Non-JSON bytes, an unknown type, a
+general message over 500 characters, and a datagram over 2000 bytes are logged as
+\texttt{DROP} with a reason, and ignored. Every peer writes
+\texttt{chat-<name>-<port>.log} with one line for each datagram it sends, receives
+or drops: time, direction, endpoint, kind and size.
 
-\subsection{General channel and discovery}
-
-A line that does not start with a slash is sent as one \texttt{gen} datagram.
-The datagram is sent to every directed broadcast address of the computer (for
-example \texttt{192.168.1.255}), to the limited broadcast
-\texttt{255.255.255.255}, and to the loopback broadcast
-\texttt{127.255.255.255}. The first two reach the other computers; the last one
-reaches the other peers on the same computer, because a broadcast sent out the
-network card does not come back to local sockets.
-
-The author also receives its own datagram. The peer ignores a \texttt{gen} whose
-\texttt{from} is its own name, and deduplicates the other copies with the
-\texttt{from:id} key, so a message is shown exactly once.
-
-When a peer starts, it broadcasts \texttt{join}. Every online peer adds it,
-answers with \texttt{hello} and the newcomer learns the complete list within
-about one second. Heartbeats are sent every 5 seconds; a peer that has not been
-heard for 15 seconds is removed and shown as left. \texttt{/quit} broadcasts
-\texttt{bye} immediately.
-
-Names are unique. If a peer receives a \texttt{join} with its own name but a
-different endpoint, it sends \texttt{nameinuse} to that endpoint. The newcomer
-prints an error and exits; it never joins.
-
-\subsection{Private messages}
-
-\texttt{/msg name text} looks the receiver up in the peer table and sends one
-datagram to its private endpoint. The sender prints
-\texttt{[private] you -> name: text}; the receiver prints
-\texttt{[private] name: text}. A message to a name that is not online produces
-an error.
-
-A peer may advertise the wrong interface in its private endpoint when the
-computer has several network cards. The receiver therefore keeps the advertised
-private port but takes the IP address from the UDP datagram source. This makes
-private messages work on the real LAN address even when the sender is
-multi-homed.
-
-\subsection{Encryption}
-
-All peers of a chat receive the same passphrase as a command-line parameter.
-Each peer derives a 32-byte key with PBKDF2-HMAC-SHA256 \cite{rfc8018},
-100\,000 iterations and a 16-byte zero salt. Every private message uses
-AES-256-GCM \cite{nistgcm,mcgrew} with a fresh random 12-byte nonce from the OS
-CSPRNG. The nonce, the 16-byte authentication tag and the ciphertext are sent
-base64-encoded in the JSON datagram. The receiver decrypts and authenticates the
-message; a wrong passphrase or a modified ciphertext fails the GCM check and the
-message is dropped.
-
-The general channel is not encrypted, as the task specifies.
-
-\subsection{Logging and invalid input}
-
-Every peer writes \texttt{chat-<name>-<port>.log} with one line for every
-datagram it sends, receives or drops: time, direction, endpoint, kind and size.
-The log is the evidence for the defense.
-
-The receive loops validate every datagram. Non-JSON bytes, an unknown type, a
-general message longer than 500 characters, and a datagram larger than 2000
-bytes are logged as \texttt{DROP} and ignored. The chat never crashes because of
-a datagram from another program.
-
+% ======================================================================
 \section{Implementation}
-\label{sec:implementation}
+% ======================================================================
+\textbf{C\# peer.} Two \texttt{Socket} objects implement the design. The general
+socket sets \texttt{ReuseAddress} and \texttt{Broadcast}, and binds to
+\texttt{IPAddress.Any} on the chat port. The receive loops run on their own
+threads, so incoming messages print while the user types, and a console lock keeps
+the output from interleaving. On Windows the peer also turns off
+\texttt{SIO\_UDP\_CONNRESET}. Without that, an ICMP port-unreachable from a peer
+that has just left would make the next receive fail with ``connection forcibly
+closed''.
 
-\subsection{C\# peer}
+\textbf{Go peer.} The Go peer uses \texttt{net.ListenConfig} with a control function
+that sets \texttt{SO\_REUSEADDR} on Linux and Windows. Receiving runs in two
+goroutines, and a mutex protects the peer table and the set of seen messages. The
+peer uses the standard library only.
 
-The C\# peer uses two \texttt{Socket} objects, one bound to
-\texttt{IPAddress.Any} and the chat port with \texttt{ReuseAddress}, and one
-bound to an ephemeral port. The receive loops run on separate threads so that
-incoming messages are printed while the user types. A console writer lock
-prevents two threads from interleaving output. On Windows the peer also
-disables \texttt{SIO\_UDP\_CONNRESET}: without it, an ICMP port-unreachable from
-a peer that just left would make the next receive fail with ``connection
-forcibly closed''.
-
-\subsection{Go peer}
-
-The Go peer uses \texttt{net.ListenConfig} with a control function that sets
-\texttt{SO\_REUSEADDR}, \texttt{SO\_BROADCAST} and, on Unix,
-\texttt{SO\_REUSEPORT}. Receiving runs in two goroutines; a mutex protects the
-peer table and the seen-message set. The binary is built with the standard
-library only (no third-party modules).
-
-\subsection{The local-peer broadcast fix}
-
-The first two-desktop run used port 9000. Both Go peers on the Linux desktop
-could send, and the Windows peer received their datagrams, but the two local Go
-peers did not receive each other and the Linux peers did not receive the
-Windows broadcasts. Two separate causes were found:
-
+\textbf{The local-broadcast fix.} The first two-desktop run used port 9000. The
+Go peers on the Linux desktop could send, and the Windows peer received their
+datagrams. The two local Go peers did not receive each other, and the Linux peers
+did not receive the Windows broadcasts. Two causes were found:
 \begin{enumerate}[itemsep=2pt]
-    \item A broadcast sent out the Wi-Fi card is not delivered back to the
-          other local sockets. The fix is the extra \texttt{127.255.255.255}
-          target; a small Go test bound two sockets to the same port and showed
-          that both receive the loopback broadcast, while they do not receive
-          the \texttt{192.168.1.255} copy.
-    \item The Linux desktop runs UFW with the default input policy \texttt{DROP}.
-          Port 9000/UDP was not allowed, so the Windows broadcasts never
-          reached the Linux peers. The second run used port 25565/UDP, which
-          the existing UFW rules already allow. The task allows any chat port;
-          all peers used the same one.
+  \item A broadcast sent out through the Wi-Fi card does not return to the other
+        local sockets. The fix is an extra copy to \texttt{127.255.255.255}. A
+        separate Go experiment bound two sockets to the same port and showed that
+        both receive the loopback broadcast, while neither receives the
+        \texttt{192.168.1.255} copy sent by the other.
+  \item The Linux desktop runs UFW with a default-deny input policy, and port
+        9000/UDP was not allowed. The second run used 25565/UDP, which the existing
+        rules already allow. The task permits any chat port, and all peers used the
+        same one.
 \end{enumerate}
-
-After the fix, all three peers discovered each other, the two local peers
+After both fixes, all three peers discovered each other, the two local peers
 received the general channel, and the Windows peer exchanged encrypted private
 messages with both Linux peers.
 
-\section{Experimental Evaluation}
-\label{sec:evaluation}
-
-\subsection{Methodology}
-
-The evaluation follows a controlled single-case study. The case is a chat with
-three peers on two desktop computers on the same Wi-Fi subnet. The study is
-guided by four research questions:
-\begin{description}[style=nextline,leftmargin=0pt,itemsep=1pt]
-    \item[RQ1.] Does broadcast discovery converge quickly enough for a peer to
-    see the complete membership within the one-second target?
-    \item[RQ2.] Does the two-socket design deliver a private message to exactly
-    one peer when several peers share the public chat port?
-    \item[RQ3.] Do the C\# and Go implementations interoperate, including
-    authenticated private messages?
-    \item[RQ4.] Does the implementation reject malformed, oversized, and
-    duplicate-name traffic without crashing?
-\end{description}
-
-The procedure is:
-\begin{enumerate}[itemsep=1pt]
-    \item build both implementations from a clean checkout;
-    \item start the two Go peers on the Linux desktop and the C\# peer on the
-          Windows desktop, all on the same UDP port;
-    \item exercise discovery, the general channel, \texttt{/users}, private
-          messages in both directions, and \texttt{/quit};
-    \item run separate duplicate-name and invalid-datagram tests;
-    \item record the console output and the per-datagram log on every peer, and
-          compare the observed behaviour with the expected behaviour in
-          Table~\ref{tab:checks}.
-\end{enumerate}
-
-The unit of analysis is the datagram log line and the console event, not a
-synthetic benchmark. This is appropriate for a protocol-correctness study, but
-it limits the statistical strength of the conclusions; the threats are
-discussed in Section~\ref{sec:threats}.
-
-\subsection{Environment}
+% ======================================================================
+\section{Evaluation}
+% ======================================================================
+\subsection{Setup and procedure}
+The case is one chat with three peers on two desktop computers on the same Wi-Fi
+subnet. Table~\ref{tab:env} lists the machines. Alice and Bob are Go peers on the
+Linux desktop and share port 25565. Cara is a C\# peer on the Windows desktop. This
+covers both requirements at once: several peers on one computer, and at least three
+peers on at least two computers.
 
 \begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l X@{}}
 \toprule
-Role / owner & Machine and environment \\
+\textbf{Machine} & \textbf{Configuration} \\
 \midrule
-Desktop A (Windows) & \textbf{Dinu Plesu}: HP OMEN 16-wd0xxx; Windows 11 IoT Enterprise LTSC 10.0.26300, 64-bit; Intel Core i5-13420H, 8 cores / 12 threads, 2.1 GHz; 16 GB DDR5-5600; Samsung 990 PRO 2 TB NVMe + Realtek RTL9210 512 GB external NVMe; NVIDIA GeForce RTX 4050 Laptop + Intel UHD; Wi-Fi 6E, 192.168.1.41 \\
-Desktop B (Linux) & \textbf{Igor Boltunov}: CachyOS, kernel 7.3.6-1-cachyos, x86-64; Intel Core i5-10300H, 4 cores / 8 threads, 2.5--4.5 GHz; 7.6 GiB RAM; Micron 2210 512 GB NVMe + WDC WD5000LPVX 500 GB HDD; NVIDIA GeForce GTX 1650 Mobile / Max-Q + Intel UHD; Wi-Fi 6, 192.168.1.22 \\
-Network & same Wi-Fi subnet, 192.168.1.0/24 \\
-Chat port & 25565/UDP (same on all peers) \\
-Passphrase & \texttt{secret} \\
+Desktop A, Windows (Cara, C\#) & Dinu Plesu: HP OMEN 16-wd0xxx; Windows 11 IoT Enterprise LTSC 10.0.26300; Intel Core i5-13420H, 8 cores / 12 threads; 16\,GB DDR5-5600; Wi-Fi 6E, 192.168.1.41 \\
+Desktop B, Linux (Alice and Bob, Go) & Igor Boltunov: CachyOS, kernel 7.3.6-1-cachyos; Intel Core i5-10300H, 4 cores / 8 threads; 7.6\,GiB RAM; Wi-Fi 6, 192.168.1.22 \\
+Network and port & one subnet, 192.168.1.0/24; chat port 25565/UDP on every peer \\
+Passphrase & \texttt{secret}, given on the command line of every peer \\
 \bottomrule
 \end{tabularx}
 \caption{Two-desktop test environment: both authors' machines.}
+\label{tab:env}
 \end{table}
 
-The peers were: \textbf{Cara} (C\#, Dinu's Windows desktop), \textbf{Alice} and
-\textbf{Bob} (Go, Igor's CachyOS desktop). Alice and Bob ran on the same computer
-and shared port 25565; the third peer ran on the other computer. This exercises
-both requirements at once: several peers on one computer, and at least three
-peers on at least two computers.
+The procedure was: build both implementations from a clean checkout; start the Go
+peers on the Linux desktop and the C\# peer on the Windows desktop, all on one UDP
+port; exercise discovery, the general channel, \texttt{/users}, private messages in
+both directions and \texttt{/quit}; run separate duplicate-name and invalid-datagram
+tests; and keep the console output and the datagram log of every peer. The unit of
+analysis is the console event and the log line. The study is a protocol-correctness
+check, not a benchmark, so its conclusions cover this network and these tests only.
 
-\subsection{Discovery and the general channel}
+% ---------------------------------------------------------------- Task 1
+\subsection{Task 1: The general channel}
+\label{sec:task1}
+Each general message was sent once in one datagram. Every peer printed it once,
+including its author. The terminal window below is Alice's console. Alice printed
+the general messages of the other two peers and her own, with no duplicates.
 
-All three peers discovered each other within about a second. The console output
-of Alice is shown in Listing~\ref{lst:alice}; Bob and Cara show the same three
-participants. Each general message from each peer appears once on every peer,
-including its author.
-
-\begin{lstlisting}[style=term,caption={Alice (Linux, Go): discovery, general channel, users and encrypted private messages.},label={lst:alice}]
+\begin{terminalwindow}[]
 * Bob joined the chat
 * Cara joined the chat
 * Alice joined (private ep 192.168.1.22:59308). Type messages, /msg name text, /users, /quit
 [general] Cara: hello from Cara on windows
 [general] Bob: hello from Bob on linux
 [general] Alice: hello from Alice on linux
-Online:
-  Bob 192.168.1.22:50827
-  Cara 192.168.1.41:52413
-[private] you -> Bob: private from Alice
-[private] you -> Cara: private from Alice
-[private] Bob: private from Bob
-* Cara left the chat
-\end{lstlisting}
+\end{terminalwindow}
 
-\subsection{Private messages and encryption}
+\subsubsection{Why is the socket bound to 0.0.0.0 and not to one address?}
+\texttt{0.0.0.0} receives on every interface, so the chat works over Wi-Fi,
+Ethernet or a hotspot without knowing the address in advance. A specific IP binds
+only one interface, and \texttt{127.0.0.1} sees only the local machine.
 
-Four private messages were exchanged: Alice to Bob, Alice to Cara, Bob to Cara
-and Bob to Alice. The receiver's console shows only the messages addressed to
-it. Listing~\ref{lst:bob} shows Bob receiving the two messages addressed to him
-and sending two; Cara never sees Alice--Bob traffic.
+\subsubsection{How can several peers on one computer bind the same port, and which of them get a general message?}
+With address reuse, several UDP sockets can bind the same address and port. A
+broadcast datagram is delivered to every one of them, so every local peer sees the
+general channel. A unicast datagram to the shared port reaches only one socket,
+which is why private messages use a unique port (Section~\ref{sec:task3}).
 
-\begin{lstlisting}[style=term,caption={Bob (Linux, Go): only the private messages addressed to Bob are shown.},label={lst:bob}]
-* Alice joined the chat
-* Cara joined the chat
-* Bob joined (private ep 192.168.1.22:50827). Type messages, /msg name text, /users, /quit
-[general] Cara: hello from Cara on windows
-[general] Alice: hello from Alice on linux
-[general] Bob: hello from Bob on linux
+\subsubsection{The sender's own message comes back. How does the chat recognise it?}
+Each datagram carries \texttt{from} and a per-peer \texttt{id}. A peer ignores a
+datagram whose \texttt{from} is its own name, because it already printed the
+message. It also keeps a set of \texttt{from:id} keys, since a general message is
+sent to several broadcast addresses and the same copy can arrive more than once.
+
+\subsubsection{Why at most 500 characters? What would 100,000 characters do?}
+Real networks fragment a datagram above the path MTU, which is about 1400 bytes
+for a safe margin. One lost fragment loses the whole datagram. A 500-character
+ASCII message fits comfortably below that size. Characters outside ASCII take more
+bytes in UTF-8, and a private message also grows by about a third after base64
+encoding, so a long multi-byte message can approach the MTU. A 100,000-character
+message is far beyond the 2000-byte limit: the receiver drops it, as the log of the
+invalid-input test shows.
+
+% ---------------------------------------------------------------- Task 2
+\subsection{Task 2: Who is online}
+\label{sec:task2}
+A new peer broadcasts \texttt{join}. Each online peer adds it and answers with
+\texttt{hello}. The C\# peer waits 1.2\,s to collect the answers, and the complete
+list is available within about a second, as required. Heartbeats go out every 5
+seconds; a peer not heard from for more than 15 seconds is removed and reported as
+left. \texttt{/users} lists the online peers, and \texttt{/quit} broadcasts
+\texttt{bye} at once. In the run, \texttt{/users} listed all three peers on all
+three consoles, and after \texttt{/quit} the other two printed
+\texttt{* Cara left the chat}.
+
+\begin{terminalwindow}[]
 Online:
   Alice 192.168.1.22:59308
   Cara 192.168.1.41:52413
+* Cara left the chat
+\end{terminalwindow}
+
+A second peer started as \texttt{Alice} while Alice was online. It received
+\texttt{nameinuse} and exited without joining:
+
+\begin{terminalwindow}[]
+ERROR: name 'Alice' already in use
+\end{terminalwindow}
+
+\subsubsection{How does a new peer learn who is online, and how long does it take?}
+It broadcasts \texttt{join} with its name and private endpoint. Each online peer
+records it and replies with \texttt{hello}, which carries that peer's own name and
+endpoint. The newcomer collects the replies for about 1.2\,s, so the list is
+complete within about a second.
+
+\subsubsection{A peer is killed. How and when do the others notice, and why not at once?}
+UDP has no connection and no FIN or RST. The others notice only when the
+heartbeats stop: a peer is removed when its last heartbeat is more than 15\,s old,
+so a killed process is detected after up to about 15\,s. TCP notices a closed
+connection at once because the kernel sends a FIN or RST. A UDP peer has no such
+signal, so detection needs a timeout.
+
+\subsubsection{Two peers start with the same name at the same moment. What happens?}
+Both broadcast \texttt{join}. Each sees a \texttt{join} with its own name but a
+different private endpoint, sends \texttt{nameinuse} to that endpoint and exits.
+In practice at least one of them is refused, and the survivor keeps the name. The
+check is \texttt{name == own name \&\& endpoint != own endpoint}, so a peer's own
+loopback copy is not mistaken for a conflict.
+
+% ---------------------------------------------------------------- Task 3
+\subsection{Task 3: Private messages}
+\label{sec:task3}
+\texttt{/msg name text} looks the receiver up in the peer table and sends one
+datagram to its private endpoint. The sender prints \texttt{[private] you -> name:
+text}, and the receiver prints \texttt{[private] name: text}. A message to a name
+that is not online produces an error. The receiver keeps the port from the
+advertised endpoint but takes the IP address from the datagram source, so
+private messages work on the real LAN address even when a computer has several
+network cards.
+
+Bob's console, shown below, shows only the private messages addressed
+to him. Cara never received any Alice--Bob traffic.
+
+\begin{terminalwindow}[]
+[general] Cara: hello from Cara on windows
+[general] Alice: hello from Alice on linux
+[general] Bob: hello from Bob on linux
 [private] you -> Cara: private from Bob
 [private] Alice: private from Alice
 [private] you -> Alice: private from Bob
-* Cara left the chat
-\end{lstlisting}
+\end{terminalwindow}
 
-The datagram log confirms the encryption on the wire. Listing~\ref{lst:log}
-shows Cara sending an encrypted private datagram to Bob's private endpoint and
-receiving the encrypted replies from both Linux peers. The payload is
-\texttt{privenc}, not the plaintext.
+Four private messages were exchanged: Alice to Bob, Alice to Cara, Bob to Cara and
+Bob to Alice. Cara's datagram log records the traffic. Its one outgoing private message is an
+encrypted \texttt{privenc} datagram, and the two replies arrive on its private
+socket. In the log, \texttt{RECV} lines name the socket category (\texttt{private})
+rather than the message type, so the replies are shown here by size only. Bob's log
+records a \texttt{privenc} send to each Linux peer.
 
-\begin{lstlisting}[style=plain,caption={Excerpt from Cara's datagram log: encrypted private traffic.},label={lst:log}]
+\begin{lstlisting}[style=plain,caption={Excerpt from Cara's datagram log. RECV names the socket (private), not the message type.},label={lst:log}]
 ... SEND 192.168.1.22:50827 privenc 137
 ... RECV 192.168.1.22:50827 private 132
 ... RECV 192.168.1.22:59308 private 134
 \end{lstlisting}
 
-\subsection{Users, leave, duplicate names and invalid input}
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/lab3-alice.png}\\[2pt]
+  {\small (a) Alice's console.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/lab3-bob.png}\\[2pt]
+  {\small (b) Bob's console.}
+\end{minipage}
+\caption{Task 3: each peer shows only the private messages addressed to it.}
+\label{fig:consoles}
+\end{figure}
 
-\texttt{/users} listed all three peers on all three consoles. \texttt{/quit}
-broadcast \texttt{bye}; the remaining peers printed
-\texttt{* Cara left the chat}.
+\subsubsection{Several peers on one computer share the chat port. How does a private message reach the right one?}
+Each peer also owns a second socket on an ephemeral port and advertises it. The
+private message goes to that unique endpoint, not to the shared port, so only the
+intended peer receives it, even on the same machine.
 
-A second peer started with the name \texttt{Alice} while Alice was online. It
-received \texttt{nameinuse} and exited:
+\subsubsection{Why not send the private message to everyone with the receiver's name inside?}
+Every peer would receive it and could read it. That breaks the privacy requirement
+and wastes bandwidth on every peer.
 
-\begin{lstlisting}[style=term]
-ERROR: name 'Alice' already in use
-\end{lstlisting}
+\subsubsection{What happens to a private message sent to a peer that left a second ago?}
+The sender's peer table may still list that peer until the 15\,s timeout. The
+datagram goes to a closed port and is lost, and UDP does not confirm delivery.
 
+\subsubsection{UDP can lose a private message. How could the sender know, and what would it do?}
+An application-level acknowledgement would do it: the receiver returns \texttt{ack(id)},
+and the sender retries after a timeout, up to a retry limit. TCP would also do it.
+This laboratory does not implement acknowledgements, so a lost private message is
+lost.
+
+% ---------------------------------------------------------------- Task 4
+\subsection{Task 4: Secure private messages}
+\label{sec:task4}
+All peers receive the passphrase as a command-line argument. Each derives the same
+32-byte key with PBKDF2-HMAC-SHA256, 100\,000 iterations and a 16-byte salt. The
+salt is fixed in the code and shared by both implementations, so the same
+passphrase yields the same key on every peer. Each private message is sealed with
+AES-256-GCM under a fresh random 12-byte nonce from the
+operating system's cryptographic random generator. The nonce, the 16-byte tag and
+the ciphertext travel base64-encoded inside the JSON datagram. The general channel
+is not encrypted, as the task specifies.
+
+The evidence shows the encrypted form on the wire: The log below records a
+\texttt{privenc} datagram rather than the plaintext. A receiver that decrypts a
+message successfully prints it. A receiver that cannot authenticate a message, for
+example because the passphrase differs, prints \texttt{<decryption failed>} and
+drops it. That behaviour is in the code, but the run did not test tampering or a
+wrong passphrase, so those two cases are argued from the design.
+
+\subsubsection{Why derive the key with a KDF instead of using the passphrase bytes?}
+A passphrase has low entropy and arbitrary length. PBKDF2 stretches it with
+100\,000 iterations into a fixed 32-byte key, which makes guessing the passphrase
+much slower.
+
+\subsubsection{Which algorithm encrypts the messages? Why must the nonce never repeat, and where does yours come from?}
+AES-256-GCM. Reusing a nonce with the same key breaks both confidentiality and
+authenticity in GCM. Each message uses a fresh random 96-bit nonce from the
+operating system's random generator, and the nonce is sent with the ciphertext.
+
+\subsubsection{Every member knows the passphrase. Who can read a private message between Ana and Ion?}
+Any member who knows the passphrase derives the same key and can read every
+private message in the chat. Keeping a message between Ana and Ion private would
+need a key for that pair only, for example from an authenticated Diffie--Hellman
+exchange, and encryption under that key.
+
+\subsubsection{Can someone without the passphrase change an encrypted message unnoticed?}
+No. The GCM tag covers the ciphertext. Any change makes the tag check fail, and the
+receiver prints \texttt{<decryption failed>} and drops the message. Without the key
+an attacker cannot compute a valid tag for a changed message.
+
+% ======================================================================
+\subsection{Robustness across the tasks}
+% ======================================================================
 Three invalid datagrams were sent to a peer from the other computer: 14 random
-bytes, a JSON \texttt{gen} with a 600-character text, and a 3000-byte datagram.
-The peer logged and dropped them without crashing:
+bytes, a JSON \texttt{gen} message whose text is longer than 500 characters (652
+bytes in total), and a 3000-byte datagram. The peer
+logged and dropped each one and kept running:
 
-\begin{lstlisting}[style=plain]
+\begin{lstlisting}[style=plain,caption={Invalid input is logged and dropped; the peer keeps running.}]
 ... RECV 192.168.1.41:49918 general 14
 ... DROP 192.168.1.41:49918 invalid_json 14
 ... RECV 192.168.1.41:49918 general 652
@@ -618,32 +606,16 @@ The peer logged and dropped them without crashing:
 ... DROP 192.168.1.41:49918 too_long 3000
 \end{lstlisting}
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\linewidth]{figures/lab3-alice.png}
-\caption{A peer console: discovery, general channel and private message.}
-\label{fig:alice}
-\end{figure}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\linewidth]{figures/lab3-bob.png}
-\caption{The other peer sees only the private message addressed to it.}
-\label{fig:bob}
-\end{figure}
-
-\subsection{Summary of checks}
-
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}X l@{}}
 \toprule
-Check & Result \\
+\textbf{Check} & \textbf{Result} \\
 \midrule
 Three peers on two computers discover each other & pass \\
 Two peers share one port on the Linux computer & pass \\
-General message from each peer reaches all, once & pass \\
+General message from each peer reaches all peers, once & pass \\
 Private message reaches only its receiver & pass \\
 Private messages are AES-GCM encrypted on the wire & pass \\
 \texttt{/users} lists all online peers & pass \\
@@ -653,328 +625,120 @@ Invalid, oversized and too-long datagrams are dropped & pass \\
 C\# and Go peers interoperate (general and encrypted private) & pass \\
 \bottomrule
 \end{tabularx}
-\caption{Results of the two-desktop Lab 3 run.}
+\caption{Summary of the two-desktop run.}
 \label{tab:checks}
 \end{table}
 
 \subsection{Discussion}
+Three points stand out. First, the local-broadcast behaviour is a property of the
+host network stack, not of the protocol. The wire format and the discovery state
+machine were correct in the first run, but a broadcast sent out through the card
+does not return to the other sockets on the same host in every stack. The extra copy
+to \texttt{127.255.255.255} restores local delivery. The \texttt{from:id} rule
+removes the duplicate copies, so each message still counts once. This is an
+application-level workaround for a local behaviour, in the spirit of the end-to-end
+argument.
 
-The results support the four research questions. Discovery converged within the
-one-second target, the two-socket design kept private traffic on the intended
-endpoint, authenticated encryption interoperated across two languages, and
-malformed traffic was rejected without affecting the peers. Three observations
-deserve emphasis.
+Second, the environment is part of the experiment. UFW on the Linux desktop
+dropped the first run's port, although the peers were bound correctly. The protocol
+does not depend on the port, so the second run used 25565/UDP. Reproducing such a
+run needs the host configuration recorded, not only the source code and the
+command line.
 
-First, the local-peer broadcast behaviour is a host-stack property rather than a
-protocol property. IPv4 broadcast is defined as a network operation
-\cite{rfc1112}, but an outgoing broadcast is not looped back to the other
-sockets on the same host by every stack. The first run therefore failed even
-though the wire format and the discovery state machine were correct. Sending an
-additional copy to \texttt{127.255.255.255} restores the expected local fan-out;
-the duplicate copies are then suppressed by the \texttt{from:id} rule, so the
-application-level semantics remain one logical message. This is a useful lesson
-for protocol designers: a specification that is correct on the wire can still
-fail on a multi-homed host. It is also an application-level compensation for a
-local-stack behaviour, in the spirit of the end-to-end argument \cite{saltzer}.
+Third, the design makes trade-offs explicit. Broadcast is simpler than multicast
+but stays on one subnet and can be filtered. A shared passphrase protects the group
+from outsiders, but not from members. Without acknowledgements the protocol stays
+small, and a lost private datagram is simply lost.
 
-Second, the environment is part of the experiment. The Linux desktop runs UFW
-with a default-deny input policy. Port 9000/UDP was therefore not reachable even
-though the peers were bound correctly. The protocol is port-independent, so the
-second run used 25565/UDP, which the host already allowed. Reproducibility
-requires recording such host-level configuration, not only the source code and
-the command line.
+\section{Control Questions}
+% ======================================================================
+\subsubsection{1. Which TCP guarantees does UDP lack? Which did the chat rebuild?}
+UDP has no connection setup, reliable delivery, ordering, duplicate suppression,
+flow or congestion control, or stream semantics. The chat rebuilt discovery,
+join and leave, and liveness with heartbeats and timeouts. It did not rebuild
+reliable delivery or ordering.
 
-Third, the design makes explicit trade-offs. Broadcast is simpler than multicast
-but is confined to one subnet and may be filtered by access points. A shared
-passphrase protects the group from an outside observer but not from a member who
-knows the passphrase; per-pair keys would require an authenticated key exchange.
-The absence of acknowledgements keeps the protocol small but means that a lost
-private datagram is simply lost. These choices are appropriate for the
-laboratory task and are stated here rather than hidden behind the implementation.
+\subsubsection{2. Why is one \texttt{sendto} one \texttt{recvfrom} with UDP, while one \texttt{send} is not one \texttt{receive} with TCP?}
+UDP preserves message boundaries: each \texttt{sendto} is one datagram. TCP is a
+byte stream with no boundaries, so a protocol over it needs a length prefix or a
+delimiter. The chat needed neither, because each datagram is one JSON object.
 
-\subsection{Threats to validity}
-\label{sec:threats}
+\subsubsection{3. How big can a UDP datagram be? Why stay below about 1400 bytes?}
+The IPv4 UDP payload can reach 65\,507 bytes. Above the path MTU, about 1500 bytes
+on Ethernet, the IP layer fragments the datagram. One lost fragment loses the whole
+datagram, and many networks drop fragments. Staying near 1400 bytes avoids that.
 
-\textbf{Construct validity.} Success is measured through console transcripts and
-datagram logs, not through an independent packet capture or a formal
-specification. Encryption correctness is inferred from successful decryption and
-from the presence of ciphertext in the log; no cryptanalysis is performed.
+\subsubsection{4. Broadcast or multicast? Which does the chat use, and what would change?}
+Broadcast reaches every host on the subnet with no membership. Multicast reaches a
+group that hosts join, and switches can forward it selectively with IGMP. The chat
+uses broadcast. Switching to multicast would mean joining a group address and port
+and sending to that group.
 
-\textbf{Internal validity.} The two desktops have independent clocks, so
-cross-machine timestamps are indicative rather than exact. Each scenario was run
-once; the duplicate-name and invalid-datagram tests were separate runs. The
-loopback-broadcast fix and the UFW port change were introduced between the first
-and second attempts, which is why the report distinguishes the exploratory run
-from the final run.
+\subsubsection{5. How many sockets does the chat use, and to which addresses are they bound?}
+Two per peer: the general socket on \texttt{0.0.0.0:<chatPort>}, shared through
+address reuse, and the private socket on \texttt{0.0.0.0:<ephemeral>}, unique to
+the peer.
 
-\textbf{External validity.} The evaluation covers one Wi-Fi access point, two
-desktops, three peers, and two implementations. Broadcast delivery depends on
-access-point configuration such as client isolation; other operating systems and
-mobile devices were not part of the final two-desktop run. The results should
-therefore be read as a protocol study, not as a performance claim for arbitrary
-LANs.
+\subsubsection{6. What does the UDP checksum protect against? Why is it not enough against a deliberate change?}
+The checksum detects accidental corruption in transit. It is not a cryptographic
+MAC: an attacker who alters the payload can recompute it. The AES-GCM tag gives
+integrity and authenticity against anyone without the key.
 
-\textbf{Conclusion validity.} The sample is small and the study reports
-descriptive observations rather than confidence intervals. No packet-loss
-injection or adversarial testing was performed. The conclusions are limited to
-the mechanisms that were actually exercised.
-
-\section{Discussion of Design Questions}
-\label{sec:design-questions}
-
-This section connects the implementation to the questions that arise in a
-technical defense: why the sockets are bound as they are, how discovery and
-liveness work, how private messages are isolated, and what the encryption
-protects. The answers are grouped by task.
-
-\subsection*{Task 1}
-
-\textbf{1. Why bind 0.0.0.0 and not the IP or 127.0.0.1?}
-\texttt{0.0.0.0} receives on every interface, so the chat works on Wi-Fi,
-Ethernet, hotspot or USB tethering without knowing the address in advance. A
-specific IP binds only that interface; \texttt{127.0.0.1} sees only the same
-machine.
-
-\textbf{2. How can several peers on one computer bind the same port? Which receive a general message?}
-\texttt{SO\_REUSEADDR} and \texttt{SO\_REUSEPORT} let several UDP sockets bind
-the same address and port. A broadcast or multicast datagram is delivered to
-all of them, so every local peer sees the general channel. A unicast to that
-shared port is delivered to only one socket, which is why private messages use
-a separate unique port.
-
-\textbf{3. Your own message comes back; how is it recognized?}
-The datagram carries \texttt{from} and an \texttt{id}. A peer ignores datagrams
-whose \texttt{from} is its own name (it already printed the message locally),
-and deduplicates \texttt{from:id} because the general message is sent to
-several broadcast addresses.
-
-\textbf{4. Why at most 500 characters? What would happen at 100,000?}
-The maximum IPv4 UDP payload is 65,507 bytes, but real networks fragment above
-the MTU (about 1,400 safe bytes), and one lost fragment loses the datagram. 500
-UTF-8 characters stay well below that. 100,000 characters would exceed the
-datagram limit, fail to send or be fragmented and dropped; the receiver also
-drops anything over 500 characters.
-
-\subsection*{Task 2}
-
-\textbf{1. How does a new peer learn who is online, and how long does it take?}
-It broadcasts \texttt{join} with its name and private endpoint. Every online
-peer adds it, replies with \texttt{hello}, and the newcomer waits about 1.2 s;
-the list is complete within about a second.
-
-\textbf{2. A peer process is killed. How and when do the others notice? Why not at once?}
-UDP has no connection and no FIN/RST. Peers send \texttt{heartbeat} every 5 s
-and remove a peer whose last heartbeat is older than 15 s. A killed process is
-noticed after up to about 15 s. TCP would notice a closed connection at once
-because the kernel sends FIN/RST.
-
-\textbf{3. Two peers start with the same name at the same moment. What happens?}
-Both broadcast \texttt{join}. Each sees a \texttt{join} with its own name but a
-different private endpoint, sends \texttt{nameinuse} to that endpoint, and
-exits. In practice at least one is rejected; the survivor keeps the name. The
-check is \texttt{name == my name \&\& endpoint != my endpoint}, so a peer's own
-loopback is not mistaken for a conflict.
-
-\subsection*{Task 3}
-
-\textbf{1. Several peers on one computer share the chat port. How does a private message reach the right one?}
-Every peer also binds a second socket to an ephemeral port and advertises that
-endpoint. A private message is sent to that unique endpoint, not to the shared
-chat port, so only the intended peer receives it, even on the same machine.
-
-\textbf{2. Why not send a private message to everybody with the receiver name inside?}
-Everyone would receive and could read it; it also wastes bandwidth and breaks
-the privacy requirement.
-
-\textbf{3. What happens to a private message sent to a peer that left a second ago?}
-The sender's list may still contain it until the 15 s timeout. The datagram goes
-to a closed port and is lost; UDP has no delivery confirmation.
-
-\textbf{4. UDP can lose a private message. How could the sender know, and what would it do?}
-Add an application-level ACK: the receiver sends \texttt{ack(id)}, the sender
-retries with a timeout and a retry limit; or use TCP. This lab does not
-implement ACKs, so a lost private message is lost.
-
-\subsection*{Task 4}
-
-\textbf{1. Why derive the key with a KDF instead of using the passphrase bytes?}
-A passphrase is low-entropy and has arbitrary length. PBKDF2 stretches it with
-100,000 iterations to a fixed 32-byte key and makes brute-force guessing slower.
-
-\textbf{2. Which algorithm encrypts messages? Why must the nonce never repeat? Where do yours come from?}
-AES-256-GCM. Reusing a nonce with the same key breaks GCM's confidentiality and
-authentication guarantees. Each message uses a fresh random 12-byte nonce from
-a CSPRNG; the nonce is sent with the ciphertext and tag.
-
-\textbf{3. Every member knows the passphrase. Who can read Ana--Ion? What would be needed for only the two?}
-Any member who knows the passphrase can derive the key and read every private
-message. To restrict it to Ana and Ion, they would need a per-pair key exchange
-(for example authenticated Diffie--Hellman) and encryption with that pair key,
-not a chat-wide key.
-
-\textbf{4. Can someone without the passphrase change an encrypted message unnoticed? What protects it?}
-No. AES-GCM produces an authentication tag over the ciphertext; any change
-makes the decryption fail, and the receiver logs a decryption failure and drops
-the message. Without the key the attacker cannot forge a valid tag.
-
-\subsection*{Control questions}
-
-\textbf{1. Which TCP promises does UDP not make?} Connection setup, reliable
-delivery, ordering, no duplication, flow/congestion control and stream
-semantics. The chat rebuilt discovery, join/leave and keep-alive with
-heartbeats and timeouts, but not reliable delivery or ordering.
-
-\textbf{2. Why is one sendto one recvfrom with UDP, while one send is not one receive with TCP?}
-UDP preserves datagram boundaries: each \texttt{sendto} is one datagram. TCP is
-a byte stream with no message boundaries, so it needs a length prefix or a
-delimiter. The chat's JSON gives the internal structure; the datagram boundary
-gives the message boundary.
-
-\textbf{3. How big can a UDP datagram be? Why stay below about 1,400 bytes?}
-The maximum IPv4 UDP payload is 65,507 bytes. Above the path MTU (about 1,500
-bytes, about 1,400 safe) the IP layer fragments; one lost fragment loses the
-whole datagram, and many networks drop fragments.
-
-\textbf{4. Broadcast vs multicast; which is used and what would change?}
-Broadcast sends to every host on the subnet without membership. Multicast sends
-to a group that hosts join; switches and routers can forward it selectively
-with IGMP. This chat uses broadcast. Multicast would require joining a group
-address and port and sending to that group.
-
-\textbf{5. How many sockets? Bound to what?}
-Two per peer: the general socket on \texttt{0.0.0.0:<chatPort>} (shared,
-reuse-address/reuse-port) and the private socket on
-\texttt{0.0.0.0:<ephemeral>} (unique).
-
-\textbf{6. What does the UDP checksum protect against? Why not enough against a deliberate change?}
-It detects accidental corruption in transit. It is not a cryptographic MAC: an
-attacker who changes the payload can recompute the checksum. AES-GCM's tag
-provides integrity and authenticity against anyone without the key.
-
+% ======================================================================
 \section{Conclusion and Future Work}
-\label{sec:conclusion}
+% ======================================================================
+The chat meets all four tasks and the two-language requirement. It uses raw UDP
+sockets, one program per peer and two sockets per peer, broadcast discovery with
+heartbeats, unique names, unicast private messages, AES-GCM with PBKDF2 key
+derivation, and a log of every datagram. In the two-desktop run three peers on two
+computers exchanged general and encrypted private messages, and two peers shared one
+port on the Linux computer. The run also found and fixed a real local-broadcast
+issue. Invalid and oversized datagrams were dropped and logged without crashing the
+chat.
 
-The chat meets all four tasks and the two-language bonus. It uses raw UDP
-sockets, one program per peer, two sockets per peer, broadcast discovery with
-heartbeats, unique names, unicast private messages, AES-GCM encryption with
-PBKDF2 key derivation, and complete datagram logging. The two-desktop run
-showed three peers on two computers, two of them sharing one port on the same
-Linux computer, with general and encrypted private messages in both directions.
-The run also found and fixed a real local-broadcast issue: a datagram sent out
-the network card does not return to the other sockets on the same computer, so
-the implementation now also sends to the loopback broadcast address. Invalid
-and oversized datagrams are dropped and logged without crashing the chat.
+Future work could compare broadcast with a multicast version on the same testbed,
+using IGMP group membership. Per-pair keys from an authenticated Diffie--Hellman
+exchange would protect private messages from other members. Acknowledgements with
+bounded retransmission would make the private channel reliable at the cost of
+state. A larger study with packet-loss injection, several access points and mobile
+devices would strengthen the external validity of the measurements.
 
-Several directions remain for future work. A multicast implementation with
-IGMP membership would avoid subnet-wide broadcast and could be compared with the
-broadcast version on the same testbed. Per-pair keys obtained through an
-authenticated Diffie--Hellman exchange would protect private messages from other
-chat members, not only from outside observers. Application-level acknowledgements
-and bounded retransmission would turn the private channel into a reliable one,
-at the cost of additional state. Finally, a larger and more diverse evaluation
-with packet-loss injection, multiple access points, and mobile devices would
-strengthen the external validity of the measurements.
+% ======================================================================
+% ======================================================================
+% ======================================================================
+\section{Evidence files}
+\label{app:evidence}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}X@{}}
+\toprule
+\textbf{File or directory (under \texttt{Lab3/evidence/two-desktop-2026-11-26/})} \\
+\midrule
+\path{linux-peers-25565/}: Alice and Bob consoles and full datagram logs \\
+\path{windows-csharp-peer-25565/}: Cara console and datagram log \\
+\path{duplicate-name/}: duplicate-name refusal \\
+\path{invalid-datagrams/}: invalid, too-long and oversized datagrams \\
+\bottomrule
+\end{tabularx}
+\caption{Evidence files behind the results of this report.}
+\end{table}
 
-\section*{Data availability}
+\section{Source Code and Build Instructions}\label{sec:source}
 
-The source code, raw console transcripts, datagram logs, and the LaTeX source of
-this report are available in the NP-Labs repository
-\cite{repo}. The exact files used for the results are listed in
-Appendix~\ref{app:evidence}.
+The complete source code is in the NP-Labs repository, in the 3 folder:
+\begin{center}
+\large
+\url{https://github.com/Prince-of-Nothing/NP-Labs}
+\end{center}
 
-\begin{thebibliography}{99}
-
-\bibitem{rfc768}
-J. Postel, ``User Datagram Protocol,'' RFC 768, Internet Engineering Task
-Force, Aug. 1980.
-
-\bibitem{rfc1112}
-S. E. Deering, ``Host Extensions for IP Multicasting,'' RFC 1112, Internet
-Engineering Task Force, Aug. 1989.
-
-\bibitem{rfc6762}
-S. Cheshire and M. Krochmal, ``Multicast DNS,'' RFC 6762, Internet Engineering
-Task Force, Feb. 2013.
-
-\bibitem{rfc8018}
-K. Moriarty, B. Kaliski, and A. Rusch, ``PKCS \#5: Password-Based Cryptography
-Specification Version 2.2,'' RFC 8018, Internet Engineering Task Force,
-Jan. 2017.
-
-\bibitem{nistgcm}
-M. Dworkin, ``Recommendation for Block Cipher Modes of Operation:
-Galois/Counter Mode (GCM) and GMAC,'' NIST Special Publication 800-38D,
-National Institute of Standards and Technology, 2007.
-
-\bibitem{mcgrew}
-D. A. McGrew and J. Viega, ``The Galois/Counter Mode of Operation (GCM),''
-Technical report, Cisco Systems and University of California, Berkeley, 2004.
-
-\bibitem{tanenbaum}
-A. S. Tanenbaum and M. van Steen, \emph{Distributed Systems}, 4th ed.
-Maarten van Steen, 2023.
-
-\bibitem{kurose}
-J. F. Kurose and K. W. Ross, \emph{Computer Networking: A Top-Down Approach},
-8th ed. Pearson, 2021.
-
-\bibitem{lamport}
-L. Lamport, ``Time, Clocks, and the Ordering of Events in a Distributed
-System,'' \emph{Communications of the ACM}, vol. 21, no. 7, pp. 558--565, 1978.
-
-\bibitem{saltzer}
-J. H. Saltzer, D. P. Reed, and D. D. Clark, ``End-to-End Arguments in System
-Design,'' \emph{ACM Transactions on Computer Systems}, vol. 2, no. 4,
-pp. 277--288, 1984.
-
-\bibitem{task}
-Laboratory Work 3: A Local Network Chat, Network Programming, Technical
-University of Moldova, 2026.
-
-\bibitem{repo}
-NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
-branch \texttt{final/labs-2-3-4-2026-11-26}.
-
-\bibitem{knowledge}
-NP-Labs, \texttt{Lab3/KNOWLEDGE.md} and \texttt{Lab3/README.md}.
-
-\bibitem{evidence}
-NP-Labs, \texttt{Lab3/evidence/two-desktop-2026-11-26/}.
-
-\end{thebibliography}
-
-\appendix
-\section{Build and run}
-
-\begin{lstlisting}[style=term,caption={Build and start a C\# peer and two Go peers.}]
-dotnet build Lab3/csharp/Chat.csproj
+\begin{terminalwindow}[]
 dotnet run --project Lab3/csharp/Chat.csproj -- Cara 25565 secret
 
 cd Lab3/go
-go build -o lab3-chat .
+go build -o lab3-chat.
 ./lab3-chat Alice 25565 secret
-./lab3-chat Bob   25565 secret
-\end{lstlisting}
-
-\clearpage
-\section{Evidence map}
-\label{app:evidence}
-
-\begin{table}[!ht]
-\centering
-\small
-\begin{tabularx}{\textwidth}{@{}l X@{}}
-\toprule
-Evidence & Content \\
-\midrule
-\path{Lab3/evidence/two-desktop-2026-11-26/linux-peers-25565/} & Alice and Bob consoles and full datagram logs \\
-\path{Lab3/evidence/two-desktop-2026-11-26/windows-csharp-peer-25565/} & Cara console and datagram log \\
-\path{Lab3/evidence/two-desktop-2026-11-26/duplicate-name/} & duplicate-name refusal \\
-\path{Lab3/evidence/two-desktop-2026-11-26/invalid-datagrams/} & invalid, too-long and oversized datagrams \\
-\texttt{Lab3/report/report.pdf} & this report \\
-\bottomrule
-\end{tabularx}
-\caption{Where to find the raw evidence for this report.}
-\end{table}
+./lab3-chat Bob 25565 secret
+\end{terminalwindow}
 
 \end{document}

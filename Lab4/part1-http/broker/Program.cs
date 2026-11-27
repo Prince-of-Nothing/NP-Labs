@@ -105,8 +105,6 @@ class Program
         name.Length is >= 1 and <= 64 && name != "." && name != ".." &&
         name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-' || c == '.');
 
-    static readonly object PersistLock = new();
-
     static Topic GetOrCreateTopic(string name)
     {
         lock (TopicsLock)
@@ -178,37 +176,33 @@ class Program
             Log($"400 invalid topic name from {client}");
             res.StatusCode = 400; WriteText(res, ""); return;
         }
-        // Task3: token auth
+        // Task3: token auth. A token from the tokens file is always required. With no
+        // tokens file LookupToken finds nothing, so every publish is refused (fail closed).
         string? auth = req.Headers["Authorization"];
-        TokenInfo? tokenInfo = null;
-        bool authRequired = File.Exists(tokensFile);
-        if (authRequired)
+        if (string.IsNullOrEmpty(auth) || !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrEmpty(auth) || !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            {
-                res.StatusCode = 401;
-                res.Headers["WWW-Authenticate"] = "Bearer";
-                WriteText(res, "");
-                Log($"Publish unauthorized (no token) {client} topic={topicName}");
-                return;
-            }
-            string tok = auth.Substring("Bearer ".Length).Trim();
-            tokenInfo = LookupToken(tok);
-            if (tokenInfo == null)
-            {
-                res.StatusCode = 401;
-                res.Headers["WWW-Authenticate"] = "Bearer";
-                WriteText(res, "");
-                Log($"Publish unauthorized (unknown token) {client} topic={topicName}");
-                return;
-            }
-            if (!tokenInfo.Topics.Contains(topicName))
-            {
-                res.StatusCode = 403;
-                WriteText(res, "");
-                Log($"Publish forbidden {client} topic={topicName}");
-                return;
-            }
+            res.StatusCode = 401;
+            res.Headers["WWW-Authenticate"] = "Bearer";
+            WriteText(res, "");
+            Log($"Publish unauthorized (no token) {client} topic={topicName}");
+            return;
+        }
+        string tok = auth.Substring("Bearer ".Length).Trim();
+        TokenInfo? tokenInfo = LookupToken(tok);
+        if (tokenInfo == null)
+        {
+            res.StatusCode = 401;
+            res.Headers["WWW-Authenticate"] = "Bearer";
+            WriteText(res, "");
+            Log($"Publish unauthorized (unknown token, or no tokens file) {client} topic={topicName}");
+            return;
+        }
+        if (!tokenInfo.Topics.Contains(topicName))
+        {
+            res.StatusCode = 403;
+            WriteText(res, "");
+            Log($"Publish forbidden {client} topic={topicName}");
+            return;
         }
 
         // read body
@@ -237,27 +231,44 @@ class Program
                 Log($"400 malformed message from {client} topic={topicName}");
                 res.StatusCode = 400; WriteText(res, ""); return;
             }
-            // With auth on, the sender is the token's owner, not a client-supplied claim.
-            if (tokenInfo != null) sender = tokenInfo.Publisher;
-            else if (string.IsNullOrEmpty(sender)) sender = "anonymous";
+            // The sender is the token's owner, not a client-supplied claim.
+            sender = tokenInfo.Publisher;
 
             var topic = GetOrCreateTopic(topicName);
             Message msg;
+            bool saved;
             lock (topic.Lock)
             {
                 msg = new Message
                 {
-                    Id = topic.NextId++,
+                    Id = topic.NextId,
                     Topic = topicName,
                     Sender = sender,
                     Body = body,
                     Time = DateTime.UtcNow
                 };
                 topic.Messages.Add(msg);
-                // enqueue under the topic lock so delivery order matches id order
-                DeliveryQueue.Add(new DeliveryItem { Msg = msg });
+                // saved under the topic lock, so the file always holds the latest state
+                saved = SaveTopic(topic);
+                if (saved)
+                {
+                    topic.NextId++;
+                    // queued under the same lock, so delivery order matches id order
+                    DeliveryQueue.Add(new DeliveryItem { Msg = msg });
+                }
+                else
+                {
+                    // not saved, so not accepted: take the message back out
+                    topic.Messages.RemoveAt(topic.Messages.Count - 1);
+                }
             }
-            PersistTopic(topic);
+            if (!saved)
+            {
+                res.StatusCode = 500;
+                WriteText(res, "");
+                Log($"Publish failed (not saved) topic={topicName} from {client}");
+                return;
+            }
             // respond 202
             var respObj = new { id = msg.Id, topic = msg.Topic, sender = msg.Sender, body = msg.Body, time = msg.Time };
             res.StatusCode = 202;
@@ -282,6 +293,8 @@ class Program
         var sub = new Subscriber { Response = res, Stream = stream, Alive = true, Client = client };
         lock (topic.Lock) topic.Subscribers.Add(sub);
         Log($"Subscriber added topic={topicName} {client}");
+        // send the status and headers now, so the subscriber knows it is subscribed
+        try { stream.Flush(); } catch { }
 
         // keep open; detect disconnect via periodic heartbeat write
         try
@@ -353,26 +366,27 @@ class Program
         }
     }
 
-    static void PersistTopic(Topic topic)
+    // Writes the topic's messages through a temporary file. The caller holds topic.Lock,
+    // so the file always holds the latest state and two writes for one topic never overlap.
+    // Returns false (and logs why) when the file could not be written.
+    static bool SaveTopic(Topic topic)
     {
         try
         {
-            // Serialize writers: snapshot and write under one lock so an older snapshot
-            // can never overwrite a newer one.
-            lock (PersistLock)
-            {
-                string dir = Path.Combine(dataDir, topic.Name);
-                Directory.CreateDirectory(dir);
-                string file = Path.Combine(dir, "messages.json");
-                string tmp = file + ".tmp";
-                List<Message> snapshot;
-                lock (topic.Lock) snapshot = new List<Message>(topic.Messages);
-                string json = JsonSerializer.Serialize(snapshot, FileJson);
-                File.WriteAllText(tmp, json);
-                File.Move(tmp, file, overwrite: true);
-            }
+            string dir = Path.Combine(dataDir, topic.Name);
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, "messages.json");
+            string tmp = file + ".tmp";
+            string json = JsonSerializer.Serialize(topic.Messages, FileJson);
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, file, overwrite: true);
+            return true;
         }
-        catch (Exception e) { Log($"Persist error: {e.Message}"); }
+        catch (Exception e)
+        {
+            Log($"Persist error: {e.Message}");
+            return false;
+        }
     }
 
     static TokenInfo? LookupToken(string token)

@@ -33,14 +33,16 @@ API:
 | `GET /topics/{topic}/stream` | 200 OK, open response with new messages |
 | `GET /topics` | 200 OK, topics and sizes |
 
-- Publish queues the message and answers at once; a background delivery task
-  writes it to every subscriber of the topic, in order.
+- Publish saves the message, queues it and answers at once; a background delivery
+  task writes it to every subscriber of the topic, in order.
 - A subscriber that disappears does not stop delivery to the others (detected
   with a heartbeat write, removed on failure).
-- Restart: messages are stored per topic in `broker-data/`; atomic temp file +
-  rename. Ids continue after restart.
+- Restart: messages are stored per topic in `broker-data/`; temp file + rename,
+  written under the topic's publish lock (a failed write answers 500). Ids continue
+  after restart.
 - Tokens: `tokens.txt` lines are `<token> <publisher> <topic1,topic2>`.
   Missing/unknown token → 401 + `WWW-Authenticate: Bearer`; wrong topic → 403.
+  A token is always required: with no `tokens.txt`, every publish gets 401.
 - Default prefix is `http://localhost:8080/` so it runs without Administrator.
   To accept LAN connections on Windows, run once as Administrator:
   `powershell -ExecutionPolicy Bypass -File enable-lan-http.ps1` (adds the
@@ -132,4 +134,8 @@ all ten in order:
 With auth on, the stored sender is the token owner. The Go HTTP broker was
 fixed during this run to match the C# behaviour. See
 [Lab4/evidence/two-desktop-2026-11-26/](./evidence/two-desktop-2026-11-26/README.md).
+
+Fixes made after these runs are in `report/report.tex` (section "Changes after the
+two-device run"). They were tested on one machine and have not been re-measured
+across devices.
 

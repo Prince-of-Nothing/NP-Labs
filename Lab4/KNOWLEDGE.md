@@ -9,8 +9,9 @@ Two independent implementations of the same broker:
   `google.golang.org/grpc`), one shared `proto/broker.proto`.
 
 Publishers and subscribers know only the broker. Every topic keeps its messages
-in order; ids start at 1 and grow by one. Publish queues and returns at once; a
-background delivery task writes to every subscriber of the topic.
+in order; ids start at 1 and grow by one. Publish saves and queues the message,
+then returns at once; a background delivery task writes to every subscriber of the
+topic.
 
 ## HTTP API (Part 1)
 
@@ -58,7 +59,8 @@ subscribers happens later in the background. 202 says "accepted for processing",
 not "already delivered to everyone".
 
 **Why a queue plus a background delivery task?** It decouples publisher latency
-from subscriber speed. A slow subscriber must not block a publish. The queue keeps
+from subscriber speed. A slow subscriber must not block a publish, unless the Go
+queue (1024 messages) is full. The queue keeps
 per-topic order; one delivery task consumes messages in order and fans them out.
 
 **How are ids unique with two publishers at the same time?** Each topic has a
@@ -117,7 +119,8 @@ same two cases.
 
 - `tokens.txt` may start with a UTF-8 BOM (Notepad/PowerShell); the Go brokers
   strip it before parsing, so the first token does not become unknown (401).
-- With authentication on, the broker records the **token owner** as the sender,
+- A token is always required: with no `tokens.txt`, every publish gets 401. The
+  broker records the **token owner** as the sender,
   not a client-supplied name; topic names are validated so they cannot escape
   the `broker-data` directory.
 - Cross-device evidence: HTTP (Go broker on the desktop, Go phone + C# desktop

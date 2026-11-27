@@ -30,7 +30,7 @@ there was no queueing:
 ## Third run: disconnect and refund
 
 The first Go run let the clients quit 8 s after ordering. The 12 first orders
-were ready; the 4 queued orders were cancelled when their clients left, and the
+were ready; the 4 orders that workers had already started (13 to 16, after a 4.19 s queue wait) were cancelled when their clients left, and the
 server returned their products to the stock. This exercises Task 4 with real
 cross-device clients:
 

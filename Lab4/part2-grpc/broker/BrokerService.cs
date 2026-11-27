@@ -65,8 +65,6 @@ public class BrokerService : Broker.Broker.BrokerBase
         name.Length is >= 1 and <= 64 && name != "." && name != ".." &&
         name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-' || c == '.');
 
-    static readonly object PersistLock = new();
-
     static Topic GetOrCreate(string name)
     {
         lock (TopicsLock)
@@ -85,30 +83,38 @@ public class BrokerService : Broker.Broker.BrokerBase
     {
         string topicName = request.Topic;
         if (!ValidTopic(topicName)) throw new RpcException(new Status(StatusCode.InvalidArgument, "invalid topic name"));
-        // auth
+        // auth: a token from the tokens file is always required. With no tokens file
+        // LookupToken finds nothing, so every publish is refused (fail closed).
         string? token = string.IsNullOrEmpty(request.Token) ? context.RequestHeaders.GetValue("authorization") : request.Token;
         if (token != null && token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) token = token.Substring(7).Trim();
-        bool authRequired = File.Exists(tokensFile);
-        TokenInfo? ti = null;
-        if (authRequired)
-        {
-            if (string.IsNullOrEmpty(token)) throw new RpcException(new Status(StatusCode.Unauthenticated, "missing token"));
-            ti = LookupToken(token);
-            if (ti == null) throw new RpcException(new Status(StatusCode.Unauthenticated, "unknown token"));
-            if (!ti.Topics.Contains(topicName)) throw new RpcException(new Status(StatusCode.PermissionDenied, "topic not allowed"));
-        }
+        if (string.IsNullOrEmpty(token)) throw new RpcException(new Status(StatusCode.Unauthenticated, "missing token"));
+        TokenInfo? ti = LookupToken(token);
+        if (ti == null) throw new RpcException(new Status(StatusCode.Unauthenticated, "unknown token"));
+        if (!ti.Topics.Contains(topicName)) throw new RpcException(new Status(StatusCode.PermissionDenied, "topic not allowed"));
+
         var topic = GetOrCreate(topicName);
         MessageRec msg;
+        bool saved;
         lock (topic.Lock)
         {
-            // With auth on, the sender is the token's owner, not a client-supplied claim.
-            string sender = ti != null ? ti.Publisher : request.Sender;
-            msg = new MessageRec { Id = topic.NextId++, Topic = topicName, Sender = sender, Body = request.Body, Time = DateTime.UtcNow };
+            // the sender is the token's owner, not a client-supplied claim
+            msg = new MessageRec { Id = topic.NextId, Topic = topicName, Sender = ti.Publisher, Body = request.Body, Time = DateTime.UtcNow };
             topic.Messages.Add(msg);
-            // unbounded channel: TryWrite always succeeds; doing it under the lock keeps delivery in id order
-            DeliveryQueue.Writer.TryWrite(new DeliveryItem { Msg = msg });
+            // saved under the topic lock, so the file always holds the latest state
+            saved = SaveTopic(topic);
+            if (saved)
+            {
+                topic.NextId++;
+                // unbounded channel: TryWrite always succeeds; doing it under the lock keeps delivery in id order
+                DeliveryQueue.Writer.TryWrite(new DeliveryItem { Msg = msg });
+            }
+            else
+            {
+                // not saved, so not accepted: take the message back out
+                topic.Messages.RemoveAt(topic.Messages.Count - 1);
+            }
         }
-        Persist(topic);
+        if (!saved) throw new RpcException(new Status(StatusCode.Internal, "could not save the message"));
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Publish id={msg.Id} topic={topicName} from {context.Peer}: ok");
         return Task.FromResult(new PublishReply { Id = msg.Id, Topic = msg.Topic, Sender = msg.Sender, Body = msg.Body, Time = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(msg.Time.ToUniversalTime()) });
     }
@@ -122,11 +128,16 @@ public class BrokerService : Broker.Broker.BrokerBase
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber added topic={request.Topic} {context.Peer}");
         try
         {
+            // send the headers now, so the subscriber knows the stream is open before the first message
+            await context.WriteResponseHeadersAsync(new Metadata());
             await Task.Delay(Timeout.Infinite, context.CancellationToken);
         }
         catch (TaskCanceledException) { }
-        lock (topic.Lock) topic.Subscribers.Remove(me);
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber gone topic={request.Topic} {context.Peer}");
+        finally
+        {
+            lock (topic.Lock) topic.Subscribers.Remove(me);
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Subscriber gone topic={request.Topic} {context.Peer}");
+        }
     }
 
     public override Task<ListTopicsReply> ListTopics(ListTopicsRequest request, ServerCallContext context)
@@ -166,24 +177,26 @@ public class BrokerService : Broker.Broker.BrokerBase
         }
     }
 
-    static void Persist(Topic topic)
+    // Writes the topic's messages through a temporary file. The caller holds topic.Lock,
+    // so the file always holds the latest state and two writes for one topic never overlap.
+    // Returns false (and logs why) when the file could not be written.
+    static bool SaveTopic(Topic topic)
     {
         try
         {
-            // Snapshot and write under one lock so an older snapshot never overwrites a newer one.
-            lock (PersistLock)
-            {
-                string dir = Path.Combine(dataDir, topic.Name);
-                Directory.CreateDirectory(dir);
-                string file = Path.Combine(dir, "messages.json");
-                string tmp = file + ".tmp";
-                List<MessageRec> snapshot;
-                lock (topic.Lock) snapshot = new List<MessageRec>(topic.Messages);
-                File.WriteAllText(tmp, JsonSerializer.Serialize(snapshot, FileJson));
-                File.Move(tmp, file, overwrite: true);
-            }
+            string dir = Path.Combine(dataDir, topic.Name);
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, "messages.json");
+            string tmp = file + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(topic.Messages, FileJson));
+            File.Move(tmp, file, overwrite: true);
+            return true;
         }
-        catch { }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Persist error topic={topic.Name}: {e.Message}");
+            return false;
+        }
     }
 
     static TokenInfo? LookupToken(string token)

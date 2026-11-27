@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -21,21 +22,32 @@ type Message struct {
 	Time   time.Time `json:"time"`
 }
 
+// Topic holds the messages of one topic. mu protects its fields. pubMu makes one
+// publish at a time: take the id, store the message, write the file and queue the
+// delivery all happen under it, so the ids, the file and the delivery order agree.
 type Topic struct {
 	Name        string
 	NextID      int64
 	Messages    []Message
-	Subscribers map[chan Message]bool
+	Subscribers map[chan Message]string // open answers -> client address
 	mu          sync.Mutex
+	pubMu       sync.Mutex
 }
 
 type Broker struct {
 	dataDir    string
 	tokensFile string
-	mu         sync.Mutex
+	mu         sync.Mutex // protects topics
 	topics     map[string]*Topic
-	deliver    chan Message
+
+	// Published messages waiting for delivery, in publish order. A publish waits
+	// here only when the deliveries are far behind (backpressure).
+	deliver chan Message
 }
+
+// validTopic: letters, digits, '-' and '_', 1 to 64 characters. A topic name is
+// used as a directory name, so nothing else is allowed.
+var validTopic = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
 func NewBroker(dataDir, tokensFile string) *Broker {
 	b := &Broker{
@@ -58,7 +70,7 @@ func (b *Broker) load() {
 		}
 		name := e.Name()
 		path := filepath.Join(b.dataDir, name, "messages.json")
-		t := &Topic{Name: name, Subscribers: map[chan Message]bool{}, NextID: 1}
+		t := &Topic{Name: name, Subscribers: map[chan Message]string{}, NextID: 1}
 		if data, err := os.ReadFile(path); err == nil {
 			var msgs []Message
 			if json.Unmarshal(data, &msgs) == nil {
@@ -79,34 +91,45 @@ func (b *Broker) topic(name string) *Topic {
 	defer b.mu.Unlock()
 	t, ok := b.topics[name]
 	if !ok {
-		t = &Topic{Name: name, Subscribers: map[chan Message]bool{}, NextID: 1}
+		t = &Topic{Name: name, Subscribers: map[chan Message]string{}, NextID: 1}
 		b.topics[name] = t
 		os.MkdirAll(filepath.Join(b.dataDir, name), 0755)
 	}
 	return t
 }
 
-func (b *Broker) persist(t *Topic) {
-	t.mu.Lock()
-	snapshot := make([]Message, len(t.Messages))
-	copy(snapshot, t.Messages)
-	t.mu.Unlock()
-	data, err := json.Marshal(snapshot)
+// persist writes the topic's messages to messages.json through a temporary file,
+// so a crash in the middle of a write leaves the old file in place. The caller
+// holds t.mu, so the file always holds the latest state and two writes for one
+// topic never overlap.
+func (b *Broker) persist(t *Topic) error {
+	data, err := json.Marshal(t.Messages)
 	if err != nil {
-		return
+		return err
 	}
 	path := filepath.Join(b.dataDir, t.Name, "messages.json")
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		return
+	f, err := os.Create(tmp)
+	if err != nil {
+		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		// Windows cannot rename over an existing file.
-		_ = os.Remove(path)
-		_ = os.Rename(tmp, path)
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
 	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path) // replaces the old file on Linux and on Windows
 }
 
+// deliveryLoop writes the published messages, one at a time and in publish order,
+// to the open answers of each topic. Every subscriber therefore sees one topic's
+// messages in id order.
 func (b *Broker) deliveryLoop() {
 	for msg := range b.deliver {
 		b.mu.Lock()
@@ -116,22 +139,24 @@ func (b *Broker) deliveryLoop() {
 			continue
 		}
 		t.mu.Lock()
-		subs := make([]chan Message, 0, len(t.Subscribers))
-		for ch := range t.Subscribers {
-			subs = append(subs, ch)
+		subs := make(map[chan Message]string, len(t.Subscribers))
+		for ch, client := range t.Subscribers {
+			subs[ch] = client
 		}
 		t.mu.Unlock()
-		for _, ch := range subs {
+		for ch, client := range subs {
 			select {
 			case ch <- msg:
-				log.Printf("Delivered id=%d topic=%s", msg.ID, msg.Topic)
+				log.Printf("Delivered id=%d topic=%s to %s", msg.ID, msg.Topic, client)
 			default:
-				// slow or gone subscriber: drop it
+				// the subscriber stopped reading: forget it; the others still get the message
 				t.mu.Lock()
-				delete(t.Subscribers, ch)
-				close(ch)
+				if _, ok := t.Subscribers[ch]; ok {
+					delete(t.Subscribers, ch)
+					close(ch)
+				}
 				t.mu.Unlock()
-				log.Printf("Subscriber removed (slow) topic=%s", msg.Topic)
+				log.Printf("Subscriber removed (too slow) topic=%s client=%s", msg.Topic, client)
 			}
 		}
 	}
@@ -182,14 +207,25 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == "POST" && strings.HasPrefix(path, "/topics/") && strings.HasSuffix(path, "/messages") {
-		name := strings.TrimSuffix(strings.TrimPrefix(path, "/topics/"), "/messages")
+	rest := strings.TrimPrefix(path, "/topics/")
+	if r.Method == "POST" && strings.HasPrefix(path, "/topics/") && strings.HasSuffix(rest, "/messages") {
+		name := strings.TrimSuffix(rest, "/messages")
+		if !validTopic.MatchString(name) {
+			log.Printf("400 invalid topic name %q from %s", name, r.RemoteAddr)
+			w.WriteHeader(400)
+			return
+		}
 		b.publish(w, r, name)
 		return
 	}
 
-	if r.Method == "GET" && strings.HasPrefix(path, "/topics/") && strings.HasSuffix(path, "/stream") {
-		name := strings.TrimSuffix(strings.TrimPrefix(path, "/topics/"), "/stream")
+	if r.Method == "GET" && strings.HasPrefix(path, "/topics/") && strings.HasSuffix(rest, "/stream") {
+		name := strings.TrimSuffix(rest, "/stream")
+		if !validTopic.MatchString(name) {
+			log.Printf("400 invalid topic name %q from %s", name, r.RemoteAddr)
+			w.WriteHeader(400)
+			return
+		}
 		b.stream(w, r, name)
 		return
 	}
@@ -199,30 +235,29 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *Broker) publish(w http.ResponseWriter, r *http.Request, topicName string) {
-	owner := ""
-	if _, err := os.Stat(b.tokensFile); err == nil {
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			w.WriteHeader(401)
-			log.Printf("Publish unauthorized (no token) %s topic=%s", r.RemoteAddr, topicName)
-			return
-		}
-		ti := b.token(strings.TrimSpace(auth[7:]))
-		if ti == nil {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			w.WriteHeader(401)
-			log.Printf("Publish unauthorized (unknown token) %s topic=%s", r.RemoteAddr, topicName)
-			return
-		}
-		if !ti.Topics[topicName] {
-			w.WriteHeader(403)
-			log.Printf("Publish forbidden %s topic=%s", r.RemoteAddr, topicName)
-			return
-		}
-		owner = ti.Publisher
+	// A token from the tokens file is always required. With no tokens file no
+	// token can match, so every publish is refused (fail closed).
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		w.WriteHeader(401)
+		log.Printf("Publish unauthorized (no token) %s topic=%s", r.RemoteAddr, topicName)
+		return
+	}
+	ti := b.token(strings.TrimSpace(auth[7:]))
+	if ti == nil {
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		w.WriteHeader(401)
+		log.Printf("Publish unauthorized (unknown token, or no tokens file) %s topic=%s", r.RemoteAddr, topicName)
+		return
+	}
+	if !ti.Topics[topicName] {
+		w.WriteHeader(403)
+		log.Printf("Publish forbidden %s topic=%s", r.RemoteAddr, topicName)
+		return
 	}
 
+	// The sender is the token's publisher; a "sender" field in the body is ignored.
 	var in struct {
 		Sender string `json:"sender"`
 		Body   string `json:"body"`
@@ -235,17 +270,24 @@ func (b *Broker) publish(w http.ResponseWriter, r *http.Request, topicName strin
 	}
 
 	t := b.topic(topicName)
+	t.pubMu.Lock() // one publish at a time per topic: ids, the file and the delivery order agree
 	t.mu.Lock()
-	msg := Message{ID: t.NextID, Topic: topicName, Sender: in.Sender, Body: in.Body, Time: time.Now().UTC()}
-	if owner != "" {
-		msg.Sender = owner
+	msg := Message{ID: t.NextID, Topic: topicName, Sender: ti.Publisher, Body: in.Body, Time: time.Now().UTC()}
+	t.Messages = append(t.Messages, msg)
+	if err := b.persist(t); err != nil {
+		// not saved, so not accepted: take the message back out
+		t.Messages = t.Messages[:len(t.Messages)-1]
+		t.mu.Unlock()
+		t.pubMu.Unlock()
+		w.WriteHeader(500)
+		log.Printf("Publish failed (not saved) topic=%s from %s: %v", topicName, r.RemoteAddr, err)
+		return
 	}
 	t.NextID++
-	t.Messages = append(t.Messages, msg)
 	t.mu.Unlock()
+	b.deliver <- msg // waits here only when the deliveries are far behind
+	t.pubMu.Unlock()
 
-	b.persist(t)
-	b.deliver <- msg
 	writeJSON(w, 202, msg)
 	log.Printf("Publish accepted id=%d topic=%s from %s", msg.ID, topicName, r.RemoteAddr)
 }
@@ -254,33 +296,37 @@ func (b *Broker) stream(w http.ResponseWriter, r *http.Request, topicName string
 	t := b.topic(topicName)
 	ch := make(chan Message, 64)
 	t.mu.Lock()
-	t.Subscribers[ch] = true
+	t.Subscribers[ch] = r.RemoteAddr
 	t.mu.Unlock()
 	log.Printf("Subscriber added topic=%s %s", topicName, r.RemoteAddr)
 
 	w.Header().Set("Content-Type", "application/x-ndjson")
 	w.WriteHeader(200)
 	flusher, _ := w.(http.Flusher)
+	if flusher != nil {
+		// send the status and headers now, so the subscriber knows it is subscribed
+		flusher.Flush()
+	}
 	enc := json.NewEncoder(w)
+loop:
 	for {
 		select {
 		case m, ok := <-ch:
 			if !ok {
-				goto done
+				break loop
 			}
 			if err := enc.Encode(m); err != nil {
-				goto done
+				break loop
 			}
 			if flusher != nil {
 				flusher.Flush()
 			}
 		case <-r.Context().Done():
-			goto done
+			break loop
 		}
 	}
-done:
 	t.mu.Lock()
-	if t.Subscribers[ch] {
+	if _, ok := t.Subscribers[ch]; ok {
 		delete(t.Subscribers, ch)
 	}
 	t.mu.Unlock()

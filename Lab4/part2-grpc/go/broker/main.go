@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -29,22 +31,33 @@ type MessageRec struct {
 	Time   time.Time `json:"time"`
 }
 
+// Topic holds the messages of one topic. mu protects its fields. pubMu makes one
+// publish at a time: take the id, store the message, write the file and queue the
+// delivery all happen under it, so the ids, the file and the delivery order agree.
 type Topic struct {
 	Name     string
 	NextID   int64
 	Messages []MessageRec
-	Subs     map[chan *pb.Message]bool
+	Subs     map[chan *pb.Message]string // open streams -> client address
 	mu       sync.Mutex
+	pubMu    sync.Mutex
 }
 
 type Broker struct {
 	pb.UnimplementedBrokerServer
 	dataDir    string
 	tokensFile string
-	mu         sync.Mutex
+	mu         sync.Mutex // protects topics
 	topics     map[string]*Topic
-	deliver    chan MessageRec
+
+	// Published messages waiting for delivery, in publish order. A publish waits
+	// here only when the deliveries are far behind (backpressure).
+	deliver chan MessageRec
 }
+
+// validTopic: letters, digits, '-' and '_', 1 to 64 characters. A topic name is
+// used as a directory name, so nothing else is allowed.
+var validTopic = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
 func NewBroker(dataDir, tokensFile string) *Broker {
 	b := &Broker{
@@ -66,7 +79,7 @@ func (b *Broker) load() {
 			continue
 		}
 		name := e.Name()
-		t := &Topic{Name: name, NextID: 1, Subs: map[chan *pb.Message]bool{}}
+		t := &Topic{Name: name, NextID: 1, Subs: map[chan *pb.Message]string{}}
 		path := filepath.Join(b.dataDir, name, "messages.json")
 		if data, err := os.ReadFile(path); err == nil {
 			var msgs []MessageRec
@@ -88,31 +101,40 @@ func (b *Broker) topic(name string) *Topic {
 	defer b.mu.Unlock()
 	t, ok := b.topics[name]
 	if !ok {
-		t = &Topic{Name: name, NextID: 1, Subs: map[chan *pb.Message]bool{}}
+		t = &Topic{Name: name, NextID: 1, Subs: map[chan *pb.Message]string{}}
 		b.topics[name] = t
 		os.MkdirAll(filepath.Join(b.dataDir, name), 0755)
 	}
 	return t
 }
 
-func (b *Broker) persist(t *Topic) {
-	t.mu.Lock()
-	snapshot := make([]MessageRec, len(t.Messages))
-	copy(snapshot, t.Messages)
-	t.mu.Unlock()
-	data, err := json.Marshal(snapshot)
+// persist writes the topic's messages to messages.json through a temporary file,
+// so a crash in the middle of a write leaves the old file in place. The caller
+// holds t.mu, so the file always holds the latest state and two writes for one
+// topic never overlap.
+func (b *Broker) persist(t *Topic) error {
+	data, err := json.Marshal(t.Messages)
 	if err != nil {
-		return
+		return err
 	}
 	path := filepath.Join(b.dataDir, t.Name, "messages.json")
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		return
+	f, err := os.Create(tmp)
+	if err != nil {
+		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(path)
-		_ = os.Rename(tmp, path)
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
 	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path) // replaces the old file on Linux and on Windows
 }
 
 func toProto(m MessageRec) *pb.Message {
@@ -122,6 +144,9 @@ func toProto(m MessageRec) *pb.Message {
 	}
 }
 
+// deliveryLoop writes the published messages, one at a time and in publish order,
+// to the open streams of each topic. Every subscriber therefore sees one topic's
+// messages in id order.
 func (b *Broker) deliveryLoop() {
 	for msg := range b.deliver {
 		b.mu.Lock()
@@ -131,24 +156,25 @@ func (b *Broker) deliveryLoop() {
 			continue
 		}
 		t.mu.Lock()
-		subs := make([]chan *pb.Message, 0, len(t.Subs))
-		for ch := range t.Subs {
-			subs = append(subs, ch)
+		subs := make(map[chan *pb.Message]string, len(t.Subs))
+		for ch, client := range t.Subs {
+			subs[ch] = client
 		}
 		t.mu.Unlock()
 		pm := toProto(msg)
-		for _, ch := range subs {
+		for ch, client := range subs {
 			select {
 			case ch <- pm:
-				log.Printf("Delivered id=%d topic=%s", msg.ID, msg.Topic)
+				log.Printf("Delivered id=%d topic=%s to %s", msg.ID, msg.Topic, client)
 			default:
+				// the subscriber stopped reading: forget it; the others still get the message
 				t.mu.Lock()
-				if t.Subs[ch] {
+				if _, ok := t.Subs[ch]; ok {
 					delete(t.Subs, ch)
 					close(ch)
 				}
 				t.mu.Unlock()
-				log.Printf("Subscriber removed (slow) topic=%s", msg.Topic)
+				log.Printf("Subscriber removed (too slow) topic=%s client=%s", msg.Topic, client)
 			}
 		}
 	}
@@ -182,12 +208,18 @@ func (b *Broker) token(tok string) *TokenInfo {
 	return nil
 }
 
-// authorize checks the authorization metadata when a tokens file exists and
-// returns the token owner (empty when authentication is disabled).
-func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) (string, error) {
-	if _, err := os.Stat(b.tokensFile); err != nil {
-		return "", nil
+// peerAddr returns the caller's address for the logs.
+func peerAddr(ctx context.Context) string {
+	if p, ok := peer.FromContext(ctx); ok {
+		return p.Addr.String()
 	}
+	return "unknown"
+}
+
+// authorize requires a token from the tokens file on every publish and returns
+// the token's publisher. With no tokens file no token can match, so every
+// publish is refused (fail closed).
+func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) (string, error) {
 	tok := reqToken
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if vals := md.Get("authorization"); len(vals) > 0 {
@@ -212,27 +244,39 @@ func (b *Broker) authorize(ctx context.Context, topic string, reqToken string) (
 }
 
 func (b *Broker) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishReply, error) {
+	client := peerAddr(ctx)
 	owner, err := b.authorize(ctx, req.Topic, req.Token)
 	if err != nil {
-		log.Printf("Publish rejected topic=%s: %v", req.Topic, err)
+		log.Printf("Publish rejected topic=%s from %s: %v", req.Topic, client, err)
 		return nil, err
 	}
-	t := b.topic(req.Topic)
-	t.mu.Lock()
-	sender := req.Sender
-	if owner != "" {
-		sender = owner
+	if !validTopic.MatchString(req.Topic) {
+		log.Printf("Publish rejected: invalid topic name %q from %s", req.Topic, client)
+		return nil, status.Error(codes.InvalidArgument, "invalid topic name")
 	}
+
+	t := b.topic(req.Topic)
+	t.pubMu.Lock() // one publish at a time per topic: ids, the file and the delivery order agree
+	t.mu.Lock()
+	// The sender is the token's publisher; the sender field of the request is ignored.
 	msg := MessageRec{
-		ID: t.NextID, Topic: req.Topic, Sender: sender, Body: req.Body, Time: time.Now().UTC(),
+		ID: t.NextID, Topic: req.Topic, Sender: owner, Body: req.Body, Time: time.Now().UTC(),
+	}
+	t.Messages = append(t.Messages, msg)
+	if err := b.persist(t); err != nil {
+		// not saved, so not accepted: take the message back out
+		t.Messages = t.Messages[:len(t.Messages)-1]
+		t.mu.Unlock()
+		t.pubMu.Unlock()
+		log.Printf("Publish failed (not saved) topic=%s from %s: %v", req.Topic, client, err)
+		return nil, status.Error(codes.Internal, "could not save the message")
 	}
 	t.NextID++
-	t.Messages = append(t.Messages, msg)
 	t.mu.Unlock()
+	b.deliver <- msg // waits here only when the deliveries are far behind
+	t.pubMu.Unlock()
 
-	b.persist(t)
-	b.deliver <- msg
-	log.Printf("Publish id=%d topic=%s", msg.ID, msg.Topic)
+	log.Printf("Publish id=%d topic=%s from %s", msg.ID, msg.Topic, client)
 	return &pb.PublishReply{
 		Id: msg.ID, Topic: msg.Topic, Sender: msg.Sender, Body: msg.Body,
 		Time: timestamppb.New(msg.Time),
@@ -240,20 +284,29 @@ func (b *Broker) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.Publi
 }
 
 func (b *Broker) Subscribe(req *pb.SubscribeRequest, stream grpc.ServerStreamingServer[pb.Message]) error {
+	if !validTopic.MatchString(req.Topic) {
+		return status.Error(codes.InvalidArgument, "invalid topic name")
+	}
+	client := peerAddr(stream.Context())
 	t := b.topic(req.Topic)
 	ch := make(chan *pb.Message, 64)
 	t.mu.Lock()
-	t.Subs[ch] = true
+	t.Subs[ch] = client
 	t.mu.Unlock()
-	log.Printf("Subscriber added topic=%s", req.Topic)
+	log.Printf("Subscriber added topic=%s %s", req.Topic, client)
 	defer func() {
 		t.mu.Lock()
-		if t.Subs[ch] {
+		if _, ok := t.Subs[ch]; ok {
 			delete(t.Subs, ch)
 		}
 		t.mu.Unlock()
-		log.Printf("Subscriber gone topic=%s", req.Topic)
+		log.Printf("Subscriber gone topic=%s %s", req.Topic, client)
 	}()
+
+	// send the headers now, so the subscriber knows the stream is open before the first message
+	if err := stream.SendHeader(metadata.MD{}); err != nil {
+		return err
+	}
 
 	for {
 		select {

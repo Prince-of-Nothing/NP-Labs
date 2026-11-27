@@ -10,9 +10,9 @@ Generated from `server-orders.csv` and `client-orders*.csv`.
 | Orders ready | 16 |
 | Orders cancelled | 0 |
 | Avg queue wait (ms) | 1048.5 |
-| Max queue wait (ms) | 4194.0 |
-| Avg prep actual (ms) | 4214.0 |
-| Max prep actual (ms) | 4242.0 |
+| Max queue wait (ms) | 4194.4 |
+| Avg prep actual (ms) | 4213.9 |
+| Max prep actual (ms) | 4241.5 |
 
 ## Orders per worker
 

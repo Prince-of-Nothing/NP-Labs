@@ -1,6 +1,6 @@
 # Lab 2 report
 
-- `report.pdf` - compiled report (13 pages), same title-page style as Lab 1.
+- `report.pdf` - compiled report (22 pages), same title-page style as Lab 1.
 - `report.tex` - LaTeX source. Compiled with Tectonic 0.17 (or any LaTeX
   distribution with the packages from the preamble).
 - `figures/` - UTM logo, console screenshots, and the metrics charts (converted

@@ -1,513 +1,320 @@
 \documentclass[12pt,a4paper]{article}
 
+% --- Packages (same set and page setup as the Lab 1 report) ---
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage[english]{babel}
-\usepackage[margin=2.5cm]{geometry}
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{enumitem}
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
-\usepackage{enumitem}
+\usepackage[many]{tcolorbox}
 \usepackage{microtype}
-\usepackage{caption}
-\usepackage{float}
-\usepackage{amsmath}
-\usepackage{amssymb}
+\usepackage{amsmath,amssymb}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \usepackage{hyperref}
 
+% --- Colours ---
 \definecolor{primary}{RGB}{18,52,86}
 \definecolor{secondary}{RGB}{41,128,185}
-\definecolor{codebg}{RGB}{248,248,248}
-\definecolor{codeframe}{RGB}{180,180,180}
-\definecolor{codegreen}{RGB}{39,136,60}
-\definecolor{codegray}{RGB}{90,90,90}
+\definecolor{accent}{RGB}{231,76,60}
+\definecolor{codebg}{RGB}{247,249,250}
+\definecolor{codeframe}{RGB}{209,213,219}
+\definecolor{codegray}{RGB}{108,117,125}
+\definecolor{termgreen}{RGB}{80,250,123}
+\definecolor{termred}{RGB}{255,85,85}
+\definecolor{termyellow}{RGB}{241,250,140}
 
-\hypersetup{hidelinks}
+\hypersetup{colorlinks=true,linkcolor=primary,citecolor=secondary,urlcolor=secondary}
 
+% --- Listings ---
 \lstdefinestyle{code}{
-    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    keywordstyle=\bfseries, stringstyle=\itshape,
-    commentstyle=\itshape\color{codegray}, numbers=left,
-    numberstyle=\tiny\color{codegray}, numbersep=8pt, frame=single,
-    rulecolor=\color{codeframe}, breaklines=true, breakatwhitespace=true,
-    showstringspaces=false, tabsize=4, captionpos=b
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{secondary}\bfseries,
+    stringstyle=\itshape,
+    commentstyle=\itshape\color{codegray},
+    numbers=left,
+    numberstyle=\tiny\color{codegray},
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b
 }
 \lstdefinestyle{plain}{
-    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    frame=single, rulecolor=\color{codeframe}, breaklines=true,
-    showstringspaces=false, captionpos=b
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    showstringspaces=false,
+    captionpos=b
 }
 \lstdefinestyle{term}{
-    backgroundcolor=\color{codebg}, basicstyle=\small\ttfamily,
-    frame=single, rulecolor=\color{codeframe}, breaklines=true,
-    showstringspaces=false, captionpos=b
+    backgroundcolor=\color{codebg},
+    basicstyle=\small\ttfamily,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    showstringspaces=false,
+    captionpos=b
 }
+
+% --- Terminal window (as in the Lab 1 report) ---
+\tcbuselibrary{listings,skins}
+\newtcblisting{terminalwindow}[1][]{%
+    enhanced,
+    colback=black,
+    colframe=black,
+    arc=2.5mm,
+    boxrule=1pt,
+    title={\textcolor{termred}{$\bullet$}\;\textcolor{termyellow}{$\bullet$}\;\textcolor{termgreen}{$\bullet$}\quad \textsf{\bfseries Console Terminal Session}},
+    fonttitle=\small\sffamily\bfseries,
+    coltitle=white,
+    attach boxed title to top left={yshift=-2mm, xshift=4mm},
+    boxed title style={colback=gray!15!black, arc=1.5mm, boxrule=0.5pt},
+    listing only,
+    listing options={
+        backgroundcolor=\color{black},
+        basicstyle=\small\ttfamily\color{white},
+        frame=none,
+        numbers=none,
+        breaklines=true,
+        tabsize=4,
+        showspaces=false,
+        showstringspaces=false,
+        keepspaces=true
+    },
+    #1
+}
+
+% --- Header and footer: page number only, no header rule ---
+\lstset{style=plain}
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small Network Programming --- Laboratory Work 4}
-\fancyhead[R]{\small D. Plesu, I. Boltunov, FAF-241}
+\setlength{\headheight}{15pt}
+\addtolength{\topmargin}{-3pt}
 \fancyfoot[C]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
 \newcommand{\studentgroup}{FAF-241}
 
 \begin{document}
-\setlength{\emergencystretch}{2em}
 
+% ======================================================================
+% TITLE PAGE
+% ======================================================================
 \begin{titlepage}
-    \centering
-    {\large \textbf{TECHNICAL UNIVERSITY OF MOLDOVA}}\\[0.2cm]
-    {\large Faculty of Computers, Informatics and Microelectronics}\\[0.2cm]
-    {\large Department of Software Engineering and Automatics}\\[0.8cm]
+  \centering
+  {\large \textbf{TECHNICAL UNIVERSITY OF MOLDOVA}}\\[0.2cm]
+  {\large Faculty of Computers, Informatics and Microelectronics}\\[0.2cm]
+  {\large Department of Software Engineering and Automatics}\\[0.8cm]
 
-    \includegraphics[width=3.5cm]{figures/utm_logo.png}\\[1.2cm]
+  \includegraphics[width=3.5cm]{figures/utm_logo.png}\\[1.2cm]
 
-    {\Large \textbf{LABORATORY WORK NO. 4}}\\[0.4cm]
-    {\LARGE \textbf{A Message Broker:\\ HTTP Streaming and gRPC}}\\[0.4cm]
-    {\large Course: Network Programming}\\[2.5cm]
+  {\Large \textbf{LABORATORY WORK NO. 4}}\\[0.4cm]
+  {\LARGE \textbf{A Message Broker:\\ HTTP Streaming and gRPC}}\\[0.5cm]
+  {\large Course: Network Programming}\\[2.5cm]
 
-    \begin{minipage}{0.52\textwidth}
-        \flushleft
-        \textbf{Authors:}\\
-        Dinu \textsc{Plesu}\\
-        Igor \textsc{Boltunov}\\
-        Student group: \studentgroup
-    \end{minipage}
-    \hfill
-    \begin{minipage}{0.40\textwidth}
-        \flushright
-        \textbf{Verified by:}\\
-        Lecturer / Supervisor\\
-        Fistic Cristofor
-    \end{minipage}
+  \begin{minipage}{0.52\textwidth}
+    \flushleft
+    \textbf{Authors:}\\
+    Dinu \textsc{Plesu}\\
+    Igor \textsc{Boltunov}\\
+    Student group: \studentgroup
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.40\textwidth}
+    \flushright
+    \textbf{Verified by:}\\
+    Lecturer / Supervisor\\
+    Fistic Cristofor
+  \end{minipage}
 
-    \vfill
-    {\large Chi\c{s}in\u{a}u --- 2026}
+  \vfill
+  {\large Chi\c{s}in\u{a}u --- 2026}
 \end{titlepage}
 
-\newpage
-\begin{abstract}
-\noindent
-This report presents the design, implementation, and experimental evaluation of
-a message broker that supports two contracts: an HTTP/1.1 API with a streaming
-response, and a gRPC API with a server-streaming call. In both parts, publishers
-send messages to named topics, the broker assigns per-topic identifiers and
-timestamps, queues each message, and a background delivery task fans it out to
-all subscribers of that topic. Messages are persisted atomically so that a
-restart preserves history and identifier continuity, and a token file restricts
-publishing to known publishers and allowed topics. Two independent
-implementations, in C\# and Go, provide the HTTP and gRPC brokers and clients.
-The evaluation uses two publishers and two subscribers on two desktop computers;
-both subscribers receive messages 1--10 in order in each part, authentication
-returns the required 401/403 or Unauthenticated/PermissionDenied statuses, and a
-restart continues at identifier 12 with all previous messages intact. The report
-compares the two contracts, discusses the design trade-offs, and states the
-threats to validity and directions for future work.
-\end{abstract}
-
-\noindent\textbf{Keywords:} message broker, publish--subscribe, HTTP streaming,
-gRPC, Protocol Buffers, persistence, authentication, distributed systems.
-
-\newpage
 \tableofcontents
 \newpage
 
+% ======================================================================
 \section{Introduction}
+% ======================================================================
+In publish--subscribe, producers send events to a topic without knowing who
+reads them, and consumers subscribe without knowing who writes. A broker in the
+middle decouples the two sides in space, time and synchronisation.
+That decoupling lets either side stop, restart or scale on its own, which is why
+brokers sit at the centre of many event-driven systems.
 
-\subsection{Motivation and problem statement}
+The laboratory asks for such a broker, with two restrictions: no existing broker
+product or messaging library may be used, and the broker must run on the
+standard HTTP server of the language in Part~1 and on gRPC in Part~2. The
+learning goal is therefore the mechanisms behind a correct broker: per-topic
+ordering, unique identifiers, background fan-out, persistence across restarts,
+and publisher authentication.
 
-Publish--subscribe is a fundamental distributed-systems pattern: producers emit
-events without knowing which consumers will read them, and consumers express
-interest in a topic without knowing which producers will write to it. The broker
-in the middle decouples the two sides in space, time, and synchronisation
-\cite{eugster}. This decoupling is what allows either side to stop, restart, or
-scale independently, and it is the reason message brokers are used in
-event-driven systems and data pipelines.
-
-The laboratory task asks for such a broker, but it forbids existing broker
-products and messaging libraries. The broker itself must be built on the
-standard HTTP server/client of the language for Part 1, and on gRPC for Part 2.
-The educational value is therefore not in operating a broker, but in
-implementing the mechanisms that make a broker correct: per-topic ordering,
-unique identifiers, background fan-out, persistence across restarts, and
-publisher authentication.
-
-\subsection{Objectives}
-
-The work has four objectives:
+The work pursues four objectives:
 \begin{enumerate}[itemsep=1pt]
-    \item implement a broker that accepts messages on named topics, assigns
-          per-topic identifiers and timestamps, and answers without waiting for
-          subscribers;
-    \item deliver each message in the background to every subscriber of its
-          topic, while allowing publishers and subscribers to start and stop
-          dynamically;
-    \item preserve messages and identifier continuity across a broker restart;
-    \item restrict publishing with bearer tokens, with the correct HTTP and gRPC
-          error semantics.
+  \item accept messages on named topics, assign per-topic identifiers and
+        timestamps, and answer without waiting for subscribers;
+  \item deliver each message in the background to every subscriber of its topic,
+        while publishers and subscribers start and stop independently;
+  \item keep messages and identifier continuity across a broker restart;
+  \item restrict publishing with bearer tokens and return the correct HTTP and
+        gRPC error codes.
 \end{enumerate}
-Part 1 realises these objectives with an HTTP/1.1 API and an open streaming
-response; Part 2 realises the same architecture with a Protocol Buffers contract
-and a server-streaming RPC.
 
-\subsection{Contributions}
+% ======================================================================
+\section{Background}
+% ======================================================================
+\textbf{Publish--subscribe.} The pattern replaces direct coupling with an
+intermediary that routes events by topic. Production brokers add
+partitioning, replication and consumer groups. The laboratory
+excludes these features on purpose. The work covers the core semantics only:
+topics, ordering, fan-out, persistence and tokens.
 
-The main contributions of this work are:
-\begin{itemize}[itemsep=1pt]
-    \item a topic model with per-topic locking that gives unique, consecutive
-          identifiers under concurrent publish requests;
-    \item a queue-and-delivery design that decouples publisher latency from
-          subscriber speed and removes dead subscribers without stopping the
-          others;
-    \item an atomic persistence scheme based on a temporary file and a rename,
-          with identifier recovery after a restart;
-    \item two contract implementations, HTTP and gRPC, that share the same
-          message model and authentication rules;
-    \item a two-desktop evaluation with two publishers and two subscribers that
-          compares the two contracts under the same workload.
-\end{itemize}
+\textbf{HTTP streaming.} An HTTP response body can be produced incrementally
+. In Part~1 a subscriber sends a \texttt{GET} and the
+broker keeps the response open, writing one JSON object per line. A publish
+returns \texttt{202 Accepted} rather than \texttt{200 OK}, because the message is
+queued and not yet delivered.
 
-\subsection{Organization}
+\textbf{gRPC.} gRPC uses Protocol Buffers as its interface language and HTTP/2
+as its transport. A server-streaming call keeps one
+HTTP/2 stream open and sends typed messages, which is the equivalent of the open
+HTTP response. The generated stubs replace hand-written paths, status-code
+conventions and JSON field names.
 
-Section~\ref{sec:background} reviews publish--subscribe, HTTP streaming, and
-gRPC. Section~\ref{sec:design} presents the broker model and design,
-Sections~\ref{sec:http} and~\ref{sec:grpc} describe the two implementations, and
-Section~\ref{sec:evaluation} reports the evaluation. Section~\ref{sec:design-questions}
-discusses the design questions, and Section~\ref{sec:conclusion} concludes with
-future work.
+\textbf{Durability and tokens.} A single-node broker is durable if it writes its
+state before acknowledging a publish, replaces the old file in one step, and does
+not acknowledge a publish that it could not write. Bearer tokens travel in the
+\texttt{Authorization} header or in the \texttt{authorization} metadata.
 
-\section{Background and Related Work}
-\label{sec:background}
-
-\subsection{Publish--subscribe and message brokers}
-
-The publish--subscribe paradigm replaces direct producer--consumer coupling with
-an intermediary that routes events by topic or content \cite{eugster}. Industrial
-brokers such as Kafka and RabbitMQ add partitioning, replication, durable
-subscriptions, and consumer groups \cite{kreps}. Those features are deliberately
-out of scope here: the laboratory requires the broker to be built from the
-standard HTTP or gRPC facilities of the language, without a messaging library.
-The work therefore implements the core semantics (topics, ordering, fan-out,
-persistence, and tokens) and leaves the industrial mechanisms to future work.
-
-\subsection{HTTP streaming}
-
-HTTP is a request--response protocol, but its semantics allow a response body to
-be produced incrementally \cite{rfc9110,rfc9112}. In Part 1 the subscriber sends
-a \texttt{GET} request and the broker keeps the response open, writing one JSON
-object per line and flushing after each message. This is a simple form of
-server push over HTTP/1.1. The publish endpoint returns \texttt{202 Accepted}
-rather than \texttt{200 OK} because the message has been queued, not necessarily
-delivered; this distinction is part of the HTTP semantics \cite{rfc9110}.
-
-\subsection{gRPC and Protocol Buffers}
-
-gRPC is a remote-procedure-call framework that uses Protocol Buffers as its
-interface definition language and HTTP/2 as its transport \cite{grpc,protobuf,rfc9113}.
-A service is declared in a \texttt{.proto} file, and the compiler generates
-typed client and server stubs. A server-streaming call keeps one HTTP/2 stream
-open and sends a sequence of typed messages, which is the natural analogue of
-the open HTTP response in Part 1. The typed contract removes the hand-written
-path and status-code conventions of the REST API, at the cost of requiring the
-generated stubs and an HTTP/2-capable runtime.
-
-\subsection{Persistence and authentication}
-
-Durability in a single-node broker reduces to writing the topic state to disk
-before acknowledging the publish, and replacing the old file atomically so that
-a crash cannot leave a half-written file \cite{kleppmann}. Part 1 and Part 2 use
-the same temporary-file-and-rename scheme. Authentication uses bearer tokens in
-the \texttt{Authorization} header (HTTP) or the \texttt{authorization} metadata
-(gRPC), following the bearer-token model \cite{rfc6750}. A token maps to a
-publisher name and a set of allowed topics; the broker uses the token owner as
-the stored sender, so a client cannot forge another publisher's identity.
-
-\subsection{Positioning of this work}
-
-The broker is intentionally single-node, in-memory for delivery, and
-file-backed for durability. It does not provide replication, consumer groups,
-replay to late subscribers, or exactly-once delivery. Its value is in making the
-core broker mechanisms explicit and comparable across two contracts: the same
-topic model, the same identifier rule, the same persistence scheme, and the same
-token rules are implemented twice, once over HTTP and once over gRPC.
-
-\section{System Design}
-\label{sec:design}
-
-\subsection{System model and notation}
-
-Let $T$ be the set of topics. For a topic $t\in T$, let
-$M_t=\langle m_{t,1},m_{t,2},\ldots\rangle$ be its message sequence and let
-$S_t$ be the set of subscribers currently attached to $t$. Each message has an
-identifier $id(m)$, a topic, a sender, a body, and a timestamp. The identifier
-rule is:
-\begin{equation}
-id(m_{t,k+1}) = id(m_{t,k}) + 1, \qquad id(m_{t,1}) = 1,
-\label{eq:id}
-\end{equation}
-and the assignment is performed under the topic lock, together with the append
-and the timestamp, so two concurrent publishers cannot receive the same
-identifier.
-
-A publish operation appends $m$ to $M_t$ and enqueues it for delivery. The
-delivery task writes $m$ to every subscriber in a snapshot of $S_t$:
-\begin{equation}
-D(m) = \lvert S_t \rvert,
-\label{eq:fanout}
-\end{equation}
-where $D(m)$ is the number of write attempts for $m$. A failed write removes
-that subscriber from $S_t$; the remaining subscribers still receive $m$. The
-publish acknowledgement is therefore independent of $D(m)$, which is the
-latency-decoupling property of the design.
-
-After a restart, the broker loads $M_t$ from disk and sets
-\begin{equation}
-id_{\mathrm{next}}(t) = \max\{id(m) : m\in M_t\} + 1,
-\label{eq:restart}
-\end{equation}
-so the identifier sequence continues without gaps at the boundary.
+% ======================================================================
+\section{Design}
+% ======================================================================
+Figure~\ref{fig:topology} shows the topology. Publishers and subscribers know
+only the broker. The broker owns the topics, the delivery queue, persistence and
+token checks. Both parts share this design, and only the transport differs.
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
   node distance=1.8cm,
   box/.style={draw, rounded corners, minimum width=2.4cm, minimum height=1.0cm,
-              align=center, fill=white},
-  broker/.style={draw, rounded corners, minimum width=4.2cm, minimum height=2.4cm,
-                 align=center, fill=gray!10},
+              align=center, fill=white, font=\small},
+  broker/.style={draw, rounded corners, minimum width=4.0cm, minimum height=2.4cm,
+                 align=center, fill=primary!6, font=\small},
   arrow/.style={-{Latex[length=2mm]}, thick}
 ]
 \node[box] (p1) {Publisher 1\\C\#};
 \node[box, below=0.5cm of p1] (p2) {Publisher 2\\Go};
 \node[broker, right=2.2cm of p1, yshift=-0.75cm] (b)
-  {Broker\\[2pt]topics + queues\\delivery task\\persistence + tokens};
+  {Broker\\[2pt]topics, queue,\\delivery loop,\\persistence, tokens};
 \node[box, right=2.2cm of b, yshift=0.9cm] (s1) {Subscriber 1\\C\#};
 \node[box, right=2.2cm of b, yshift=-0.9cm] (s2) {Subscriber 2\\Go};
-\draw[arrow] (p1.east) -- node[above right, font=\scriptsize]{HTTP/gRPC} (b.west);
+\draw[arrow] (p1.east) -- node[above, font=\scriptsize, sloped]{publish} (b.west);
 \draw[arrow] (p2.east) -- (b.west);
-\draw[arrow] (b.east) -- node[above,font=\scriptsize]{stream} (s1.west);
+\draw[arrow] (b.east) -- node[above, font=\scriptsize, sloped]{deliver} (s1.west);
 \draw[arrow] (b.east) -- (s2.west);
 \end{tikzpicture}
-\caption{Broker topology. Publishers and subscribers know only the broker; the
-broker owns the topic queues, delivery task, persistence, and token checks.}
-\label{fig:broker}
+\caption{Publishers and subscribers know only the broker, which owns the queue,
+delivery loop, persistence and token checks.}
+\label{fig:topology}
 \end{figure}
 
-\subsection{Topics, messages and identifiers}
+\subsection{Identifiers and ordering}
+Each topic has its own sequence. If $id(m_k)$ is the identifier of the $k$-th
+message on a topic, then $id(m_1)=1$ and $id(m_{k+1})=id(m_k)+1$. The broker
+assigns the identifier, stamps the time, appends the message, writes the topic's
+file and queues the delivery while it holds a publish lock for that topic. Two
+publishers on the same topic therefore never receive the same identifier, the
+sequence has no gaps, and every subscriber receives the messages of a topic in
+identifier order.
 
-A topic is a named channel. Every topic keeps its messages in order; the ids
-start at 1 and grow by one. A publish gives the message its id and time and
-puts it in the topic queue. The publisher does not wait for the subscribers:
-the broker answers at once and a background delivery task writes the message to
-every subscriber of that topic.
-
-The broker protects the shared state with locks:
-
-\begin{itemize}[itemsep=2pt]
-    \item the topic map has a lock, because new topics can be created
-          concurrently;
-    \item each topic has a lock; \texttt{NextId++}, append and timestamp happen
-          inside it, so two publishers never get the same id;
-    \item the subscriber list is copied under the topic lock before delivery;
-          a failed write removes that subscriber and the others continue.
-\end{itemize}
-
-Part 1 uses a channel/queue and a delivery task per topic. Part 2 uses an
-unbounded channel and one delivery loop; messages are written to the
-server-streaming calls in id order.
+\subsection{Delivery}
+A publish is answered once its message is saved and queued. One delivery loop
+takes the queued messages in order and writes each one to the subscribers of its
+topic. The loop copies the subscriber list under the topic lock and writes outside
+it. A subscriber that cannot take a write is removed and logged; in the Go brokers
+so is one whose 64-message buffer is full. The others still receive the message.
+The Go brokers hold up to 1024 messages between the publishers and the delivery
+loop, and a publish waits only when that queue is full. The C\# brokers queue
+without a limit.
 
 \subsection{Persistence}
-
-After every accepted message the topic is serialized to
-\path{broker-data/<topic>/messages.json}. The new content is written to a
-temporary file and moved over the old one, so a crash in the middle of a write
-leaves the old file intact \cite{kleppmann}. On startup the broker loads every
-topic and sets \texttt{NextId = max(id) + 1}, so a restart loses nothing and the
-ids continue.
+After each accepted message the broker writes the topic to
+\path{broker-data/<topic>/messages.json}. It writes a temporary file and then
+renames it over the old file, so a crash during the write leaves the previous
+file intact; the Go brokers also flush the file to disk before the rename. The
+write happens while the publish lock is held, so the file always holds the latest
+state. If the write fails, the message is taken out of memory again and the
+publish is answered with 500 (HTTP) or \texttt{Internal} (gRPC), so no message is
+acknowledged that is not on disk. On startup the broker loads every topic and sets
+the next identifier to $\max(id)+1$.
 
 \subsection{Tokens}
+The broker reads \texttt{tokens.txt}, one entry per line:
+\texttt{<token> <publisher> <topic1,topic2>}. A publish without a token, or with
+an unknown one, is rejected with 401 (HTTP) or \texttt{Unauthenticated} (gRPC). A
+valid token for a topic it does not allow is rejected with 403 or
+\texttt{PermissionDenied}. A token is always required. If the file is missing, no
+token matches, so every publish is refused: the broker fails closed. With a valid
+token, the stored sender is the token's publisher, not a name supplied by the
+client. In the Go brokers a topic name may contain only letters, digits, hyphens
+and underscores (1 to 64 characters), because it becomes a directory name; the
+C\# brokers also accept dots, except the names \texttt{.} and \texttt{..}.
 
-The broker reads \texttt{tokens.txt}; each line is
-\texttt{<token> <publisher> <topic1,topic2>}. Part 1 reads the token from
-\texttt{Authorization: Bearer <token>}; missing or unknown token gives
-\textbf{401 Unauthorized} with \texttt{WWW-Authenticate: Bearer}, and a valid
-token used for a topic it does not allow gives \textbf{403 Forbidden}. Part 2
-reads the token from the \texttt{authorization} metadata; the same cases give
-\textbf{Unauthenticated} and \textbf{PermissionDenied} \cite{rfc6750}.
-
-With authentication on, the broker records the token owner as the sender, not a
-client-supplied name. This is true for both implementations.
-
-\section{The HTTP Broker}
-\label{sec:http}
-
-\subsection{API}
-
-\begin{table}[h]
-\centering
-\small
-\begin{tabularx}{\textwidth}{@{}l l X@{}}
-\toprule
-Request & Answer & What it does \\
-\midrule
-\texttt{POST /topics/\{topic\}/messages} & 202 Accepted & queue a message and answer with id and time \\
-\texttt{GET /topics/\{topic\}/stream} & 200 OK & keep the answer open and stream new messages \\
-\texttt{GET /topics} & 200 OK & list the topics and their sizes \\
-\bottomrule
-\end{tabularx}
-\caption{The HTTP API of the broker.}
-\end{table}
-
-A publish request body contains \texttt{sender} and \texttt{body}; the broker
-adds \texttt{id}, \texttt{topic} and \texttt{time}. The stream is
-newline-delimited JSON, one message per line, flushed after every message. A
-subscriber that disappears does not stop delivery to the others: a failed write
-removes it. The C\# broker also writes a periodic heartbeat to detect a dead
-subscriber; the Go broker detects it from the request context. The API follows
-the HTTP semantics for status codes and streaming responses
-\cite{rfc9110,rfc9112}.
-
-\subsection{Why 202 Accepted}
-
-The request is accepted and queued; delivery happens later in the background.
-202 says ``accepted for processing'', not ``already delivered to everyone''. A
-publish therefore stays fast even when a subscriber is slow.
-
-\subsection{Implementation}
-
-The C\# broker is built on \texttt{HttpListener}; the Go broker uses
-\texttt{net/http}. Both keep the same API and the same JSON fields, so either
-client works with either broker. The broker logs every request, every publish
-and every delivery with the client endpoint, topic, message id and result.
-
-\section{The gRPC Broker}
-\label{sec:grpc}
-
-\subsection{Contract}
-
-The shared contract is \texttt{part2-grpc/proto/broker.proto}. gRPC uses
-Protocol Buffers as its interface definition language and HTTP/2 as its
-transport \cite{grpc,protobuf,rfc9113}:
-
-\begin{lstlisting}[style=plain,caption={The Protocol Buffers contract shared by the broker, publishers and subscribers.}]
-syntax = "proto3";
-package broker;
-import "google/protobuf/timestamp.proto";
-
-service Broker {
-  rpc Publish (PublishRequest) returns (PublishReply);
-  rpc Subscribe (SubscribeRequest) returns (stream Message);
-  rpc ListTopics (ListTopicsRequest) returns (ListTopicsReply);
-}
-
-message Message {
-  int64 id = 1;
-  string topic = 2;
-  string sender = 3;
-  string body = 4;
-  google.protobuf.Timestamp time = 5;
-}
-\end{lstlisting}
-
-\texttt{Publish} is unary, \texttt{Subscribe} is server-streaming and
-\texttt{ListTopics} is unary. Part 2 has no HTTP API: the gRPC contract replaces
-the table of methods, paths, status codes and JSON fields. A subscriber opens
-one HTTP/2 stream, and the broker keeps writing messages into it for as long as
-it is open.
-
-\subsection{Authentication and errors}
-
-The token travels in the \texttt{authorization} metadata
-(\texttt{Bearer <token>}). Missing or unknown token gives
-\texttt{Unauthenticated}; a valid token for a topic it does not allow gives
-\texttt{PermissionDenied}; a valid token for an allowed topic succeeds. With
-authentication on, the stored sender is the token owner.
-
-\subsection{Persistence}
-
-Part 2 uses the same \texttt{broker-data} layout and the same atomic
-temporary-file-and-rename write. A restart keeps the messages and continues the
-ids, exactly as in Part 1.
-
-\section{Experimental Evaluation}
-\label{sec:evaluation}
-
-\subsection{Methodology}
-
-The evaluation is a controlled single-case study with two parts that share the
-same workload. The research questions are:
-\begin{description}[style=nextline,leftmargin=0pt,itemsep=1pt]
-    \item[RQ1.] Under two concurrent publishers, does every message reach every
-    subscriber exactly once, in identifier order, with unique identifiers?
-    \item[RQ2.] Does a broker restart preserve the messages and continue the
-    identifier sequence?
-    \item[RQ3.] Do the token rules produce the required HTTP and gRPC errors,
-    and is the stored sender the token owner?
-    \item[RQ4.] How do the HTTP and gRPC contracts compare under the same
-    two-publisher, two-subscriber workload?
-\end{description}
-
-The procedure is:
-\begin{enumerate}[itemsep=1pt]
-    \item build the broker and clients for both parts from a clean checkout;
-    \item start the broker and two subscribers, one C\# and one Go, on the
-          same topic;
-    \item publish five messages from the C\# publisher and five from the Go
-          publisher, with the same topic and distinct tokens;
-    \item record the broker log, both subscriber transcripts, both publisher
-          transcripts, and the persisted message file;
-    \item test the unauthenticated, forbidden-topic, and allowed-topic cases;
-    \item stop and restart the broker, publish one more message, and verify the
-          identifier and the persisted history.
-\end{enumerate}
-
-The unit of analysis is the message identifier and the delivery line, which are
-directly observable in the logs. The study does not benchmark throughput under
-load; it tests the correctness properties that the task requires, and the
-limitations of that choice are stated in Section~\ref{sec:threats}.
-
-\subsection{Environment and topology}
+% ======================================================================
+\section{Part 1: The HTTP Broker}
+% ======================================================================
+Table~\ref{tab:http-api} lists the API. Every body is JSON. The publisher sends
+\texttt{sender} and \texttt{body}, and the broker adds \texttt{id}, \texttt{topic}
+and \texttt{time} to every message it returns or forwards. The stream is
+newline-delimited JSON, flushed after each message. The C\# broker detects a dead
+subscriber with a periodic heartbeat line, and the Go broker detects it from the
+request context.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{@{}l X@{}}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
 \toprule
-Role / owner & Machine and environment \\
+\textbf{Request} & \textbf{Answer} & \textbf{Purpose} \\
 \midrule
-Desktop A (Windows) & \textbf{Dinu Plesu}: HP OMEN 16-wd0xxx; Windows 11 IoT Enterprise LTSC 10.0.26300, 64-bit; Intel Core i5-13420H, 8 cores / 12 threads, 2.1 GHz; 16 GB DDR5-5600; Samsung 990 PRO 2 TB NVMe + Realtek RTL9210 512 GB external NVMe; NVIDIA GeForce RTX 4050 Laptop + Intel UHD; Wi-Fi 6E, 192.168.1.41 \\
-Desktop B (Linux) & \textbf{Igor Boltunov}: CachyOS, kernel 7.3.6-1-cachyos, x86-64; Intel Core i5-10300H, 4 cores / 8 threads, 2.5--4.5 GHz; 7.6 GiB RAM; Micron 2210 512 GB NVMe + WDC WD5000LPVX 500 GB HDD; NVIDIA GeForce GTX 1650 Mobile / Max-Q + Intel UHD; Wi-Fi 6, 192.168.1.22 \\
-Network & same Wi-Fi subnet, 192.168.1.0/24 \\
-HTTP broker & Go, port 8080, on Dinu's Windows desktop \\
-gRPC broker & C\#, port 5000, on Dinu's Windows desktop \\
-Runtimes & .NET 10.0.404; Go 1.27.4; Rust 1.99.1; Python 3.15.2 / 3.14.10 \\
+\texttt{POST /topics/\{topic\}/messages} & 202 Accepted & queue a message; answer with its id and time \\
+\texttt{GET /topics/\{topic\}/stream} & 200 OK & keep the answer open and stream new messages \\
+\texttt{GET /topics} & 200 OK & list the topics and their sizes \\
 \bottomrule
 \end{tabularx}
-\caption{Two-desktop test environment: both authors' machines.}
+\caption{The HTTP API shared by all publishers and subscribers.}
+\label{tab:http-api}
 \end{table}
 
-For each part, two publishers and two subscribers ran at the same time: one
-C\# publisher and one C\# subscriber on Dinu's Windows desktop, and one Go
-publisher and one Go subscriber on Igor's CachyOS desktop. The brokers ran on
-Windows. Both subscribers opened their stream before the publishers started.
+\subsection{Task 1: Publish and deliver}
+The broker answers each publish at once with 202 and the new message. Delivery
+happens afterwards, in order, to every open stream of the topic. Two publishers
+on two computers each sent five messages to \texttt{grades}, and two subscribers
+received all ten in order:
 
-\subsection{Part 1: HTTP results}
-
-The C\# publisher used token \texttt{tok-teacher} and published five messages;
-the Go publisher used \texttt{tok-phone} and published five messages. Ids
-1--10 were unique and in order. Both subscribers received all ten messages, in
-order, with the token owner as sender:
-
-\begin{lstlisting}[style=term,caption={The Linux Go subscriber received both publishers' messages in order.}]
+\par\medskip\noindent\textit{The Linux Go subscriber received both publishers' messages in order.}\par\nopagebreak
+\begin{terminalwindow}[]
 Subscribing to http://192.168.1.41:8080 topic=grades
 [grades] teacher: desktop message 1
 [grades] teacher: desktop message 2
@@ -519,20 +326,74 @@ Subscribing to http://192.168.1.41:8080 topic=grades
 [grades] phone: linux message 3
 [grades] phone: linux message 4
 [grades] phone: linux message 5
-\end{lstlisting}
+\end{terminalwindow}
 
-The broker log confirms that every publish was delivered to both subscribers:
+The broker log shows one line per publish and one per delivery:
 
-\begin{lstlisting}[style=plain,caption={Broker log: one publish, two deliveries.}]
+\par\medskip\noindent\textit{Broker log for one publish: accepted, then delivered to each subscriber.}\par\nopagebreak
+\begin{terminalwindow}[]
 ... POST /topics/grades/messages from 192.168.1.41:64751
-... Delivered id=1 topic=grades
-... Delivered id=1 topic=grades
 ... Publish accepted id=1 topic=grades from 192.168.1.41:64751
-\end{lstlisting}
+... Delivered id=1 topic=grades
+... Delivered id=1 topic=grades
+\end{terminalwindow}
 
-The authentication checks gave exactly the required results:
+The transcript above is from the two-desktop run, before the fixes in
+Section~\ref{sec:changes}. The fixed Go broker also names the subscriber on each
+delivery line, as in \texttt{Delivered id=1 topic=grades to <subscriber address>}.
 
-\begin{lstlisting}[style=plain,caption={HTTP auth: 401 with \texttt{WWW-Authenticate}, 403, then 202.}]
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/lab4-http-broker.png}\\[2pt]
+  {\small (a) The broker: requests, topics and deliveries.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/lab4-http-subscriber.png}\\[2pt]
+  {\small (b) A subscriber receiving the stream.}
+\end{minipage}
+\caption{Part 1, Task 1: the HTTP broker and a subscriber during a run.}
+\label{fig:http-task1}
+\end{figure}
+
+\subsubsection{Why does a publish answer 202 and not 200?}
+The message is accepted and queued. 202 means ``accepted for processing'', not
+``already delivered to everyone''. A publish therefore stays fast even when one
+subscriber is slow, until the delivery queue is full (1024 messages in the Go
+brokers).
+
+\subsubsection{Why one queue and one delivery loop?}
+Ordering is simple to keep when one loop takes messages in the order they were
+queued. Both implementations use one queue for all topics. Each subscriber is
+written to in turn, so the cost of delivery grows with the number of subscribers,
+not with the number of publishers.
+
+\subsection{Task 2: Restarts}
+The broker was stopped and started again in the same working directory. The next
+publish got \textbf{id 12}, and \texttt{broker-data/grades/messages.json} still
+held all twelve messages, so nothing was lost and the identifiers continued.
+
+\subsubsection{Why is the temporary file renamed rather than written in place?}
+Writing in place can leave a half-written file if the broker is killed midway.
+With a temporary file and a rename, the file on disk is always either the old
+complete version or the new complete version. On Linux the rename is atomic. On
+Windows, replacing a file is close to atomic, which is enough for this laboratory
+but would need more care in a production system.
+
+\subsubsection{Does a restarted broker replay history to new subscribers?}
+No. The persistence exists to keep messages and identifiers across a restart.
+Subscribers receive only messages that arrive after they subscribe, as the
+laboratory requires.
+
+\subsection{Task 3: Strangers}
+A publish without a token, or with an unknown one, returns 401 and a
+\texttt{WWW-Authenticate: Bearer} header. A token used on a topic it does not
+allow returns 403. A valid token on an allowed topic returns 202:
+
+\par\medskip\noindent\textit{HTTP authentication: 401 with \texttt{WWW-Authenticate}, then 403, then 202.}\par\nopagebreak
+\begin{terminalwindow}[]
 ### no token -> expect 401
 HTTP/1.1 401 Unauthorized
 Www-Authenticate: Bearer
@@ -543,20 +404,94 @@ HTTP/1.1 403 Forbidden
 ### tok-phone to grades -> expect 202
 HTTP/1.1 202 Accepted
 {"id":11,...,"sender":"phone","body":"auth ok",...}
+\end{terminalwindow}
+
+\subsubsection{Why 401 for a missing token and 403 for a forbidden topic?}
+401 means the broker does not know who is calling, so it asks for credentials.
+403 means it knows the caller and refuses the action. The two codes tell a client
+whether to send a token at all or to use a different one.
+
+\subsubsection{Can a client name itself in the message?}
+No. The sender is the publisher named in \texttt{tokens.txt} for the token that
+was used. A client-supplied sender field is ignored when authentication is on.
+
+\subsubsection{Is the token scheme secure?}
+Not by itself. Tokens are static, stored in plain text and sent without TLS. The
+scheme is adequate for a trusted laboratory network and is not a deployment
+design.
+
+% ======================================================================
+\section{Part 2: The gRPC Broker}
+% ======================================================================
+Part 2 keeps the architecture and the three tasks, but replaces the HTTP API with
+one contract. The shared file \texttt{part2-grpc/proto/broker.proto} defines all
+messages and calls. The C\# and Go code is generated from it, so the publishers
+and subscribers cannot disagree about field names or types.
+
+\begin{lstlisting}[caption={The shared Protocol Buffers contract, \texttt{broker.proto}.}]
+syntax = "proto3";
+package broker;
+option go_package = "nplabs/lab4grpc/pb;broker";
+import "google/protobuf/timestamp.proto";
+
+service Broker {
+  rpc Publish (PublishRequest) returns (PublishReply);
+  rpc Subscribe (SubscribeRequest) returns (stream Message);
+  rpc ListTopics (ListTopicsRequest) returns (ListTopicsReply);
+}
+
+message PublishRequest {
+  string topic = 1;
+  string sender = 2;
+  string body = 3;
+  string token = 4;
+}
+
+message PublishReply {
+  int64 id = 1;
+  string topic = 2;
+  string sender = 3;
+  string body = 4;
+  google.protobuf.Timestamp time = 5;
+}
+
+message SubscribeRequest {
+  string topic = 1;
+}
+
+message Message {
+  int64 id = 1;
+  string topic = 2;
+  string sender = 3;
+  string body = 4;
+  google.protobuf.Timestamp time = 5;
+}
+
+message ListTopicsRequest {}
+
+message ListTopicsReply {
+  repeated TopicInfo topics = 1;
+}
+
+message TopicInfo {
+  string name = 1;
+  int32 size = 2;
+}
 \end{lstlisting}
 
-The broker was stopped and started again in the same working directory. The
-next publish got \textbf{id 12}; the file
-\texttt{broker-data/grades/messages.json} still held all twelve messages. This
-proves that nothing is lost and that the ids continue after a restart.
+\textbf{Publish} and \textbf{ListTopics} are unary calls. \textbf{Subscribe} is
+server-streaming: one HTTP/2 stream stays open, and the broker writes each new
+message of the topic into it. \texttt{PublishRequest.token} is an optional
+fallback for clients that cannot send metadata. When it is non-empty it is used;
+otherwise the \texttt{authorization} metadata is read. The evaluation used the
+metadata form.
 
-\subsection{Part 2: gRPC results}
+\subsection{Task 1: Publish and deliver}
+The same publishers, subscribers and topic as in Part 1 were used. Both
+subscribers received all ten messages in order:
 
-The same two publishers and two subscribers were used with the gRPC broker.
-The C\# publisher published five messages and the Go publisher five more; ids
-1--10 were unique. Both subscribers received all ten messages in order:
-
-\begin{lstlisting}[style=term,caption={The Linux Go gRPC subscriber received both publishers' messages.}]
+\par\medskip\noindent\textit{The Linux Go gRPC subscriber received both publishers' messages.}\par\nopagebreak
+\begin{terminalwindow}[]
 Subscribing to 192.168.1.41:5000 topic=grades
 [grades] teacher: desktop grpc message 1
 [grades] teacher: desktop grpc message 2
@@ -568,11 +503,57 @@ Subscribing to 192.168.1.41:5000 topic=grades
 [grades] phone: linux grpc message 3
 [grades] phone: linux grpc message 4
 [grades] phone: linux grpc message 5
-\end{lstlisting}
+\end{terminalwindow}
 
-The gRPC authentication checks gave the required status codes:
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/lab4-grpc-broker.png}\\[2pt]
+  {\small (a) The gRPC broker: unary publishes and stream subscribers.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/lab4-grpc-subscriber.png}\\[2pt]
+  {\small (b) A gRPC subscriber receiving the server stream.}
+\end{minipage}
+\caption{Part 2, Task 1: the gRPC broker and a subscriber during a run.}
+\label{fig:grpc-task1}
+\end{figure}
 
-\begin{lstlisting}[style=plain,caption={gRPC auth: Unauthenticated, PermissionDenied, then OK.}]
+\subsubsection{Why is Subscribe a server stream and not repeated polling?}
+The subscriber makes one call and the broker keeps the stream open. Each message
+arrives as soon as it is delivered, with no polling interval and no repeated
+requests. This is the gRPC form of the open HTTP response in Part 1.
+
+\subsubsection{How does the broker notice a subscriber that has left?}
+When the client cancels or disconnects, the request context ends, the
+\texttt{Subscribe} handler returns, and the subscriber is removed. A failed write
+has the same effect, so the other subscribers keep receiving messages.
+
+\subsubsection{Why a bounded queue, and what does the C\# version do?}
+The Go gRPC broker holds up to 1024 published messages. A publish waits only when
+that queue is full, so a stalled delivery loop slows the publishers instead of
+letting memory grow without limit. The C\# gRPC broker still uses an unbounded
+channel, so a stalled delivery loop there would grow memory instead. The
+laboratory workload is far below either limit.
+
+\subsection{Task 2: Restarts}
+The gRPC broker uses the same \texttt{broker-data} layout and the same
+temporary-file-and-rename write. After a restart the next publish got
+\textbf{id 12} and the persisted file still held all twelve messages.
+
+\subsubsection{Why does the gRPC broker need the same persistence as Part 1?}
+The laboratory defines one behaviour for both parts. Sharing the scheme means the
+restart results are directly comparable, and only the transport changes.
+
+\subsection{Task 3: Strangers}
+The token is sent in the \texttt{authorization} metadata. A call with no token
+returns \texttt{Unauthenticated}; a token for a topic it does not allow returns
+\texttt{PermissionDenied}; a valid token on an allowed topic succeeds:
+
+\par\medskip\noindent\textit{gRPC authentication: Unauthenticated, PermissionDenied, then OK.}\par\nopagebreak
+\begin{terminalwindow}[]
 ### no token -> expect Unauthenticated
 RPC error: rpc error: code = Unauthenticated desc = missing token
 
@@ -581,270 +562,203 @@ RPC error: rpc error: code = PermissionDenied desc = topic not allowed
 
 ### tok-phone to grades -> expect OK
 Published id=11
-\end{lstlisting}
+\end{terminalwindow}
 
-After a restart the next publish got \textbf{id 12}, and the persisted file
-still held all twelve messages. The same ids and the same message contents were
-used in both parts, which makes the HTTP and gRPC results directly comparable.
+\subsubsection{Why does the metadata form need no extra field?}
+Metadata is part of the transport, so the token travels outside the message and
+the contract's fields stay the same as the data. The \texttt{token} field exists
+only as a fallback, as described above.
 
-\subsection{HTTP versus gRPC}
+\subsubsection{Which status is returned for a bad token?}
+A missing or unknown token gives \texttt{Unauthenticated}. A valid token for a
+forbidden topic gives \texttt{PermissionDenied}. These match the HTTP 401 and 403
+cases.
 
-\begin{table}[h]
+% ======================================================================
+\section{Evaluation}
+% ======================================================================
+\subsection{Research questions and procedure}
+The evaluation is a controlled case study with two parts and one workload. It
+asks four questions:
+
+  \subsubsection{RQ1.} With two concurrent publishers, does every message reach every
+  subscriber once, in identifier order, with unique identifiers?
+  \subsubsection{RQ2.} Does a restart keep the messages and continue the identifiers?
+  \subsubsection{RQ3.} Do the token rules return the required errors, and is the stored
+  sender the token owner?
+  \subsubsection{RQ4.} How do the HTTP and gRPC contracts compare on the same workload?
+
+The procedure was: build both parts from a clean checkout; start the broker and
+two subscribers, one C\# and one Go, on the same topic; publish five messages
+from the C\# publisher and five from the Go publisher, each with its own token;
+record the broker log, both subscriber transcripts, both publisher transcripts
+and the persisted file; test the unauthenticated, forbidden-topic and
+allowed-topic cases; then restart the broker, publish once more and check the
+identifier and the stored history. The study checks correctness, not throughput.
+
+\subsection{Environment}
+Table~\ref{tab:env} lists the machines. The two desktops are the authors' own
+computers on the same Wi-Fi subnet. The HTTP and gRPC brokers ran on the
+Windows desktop, and the subscribers and publishers on both machines.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Role} & \textbf{Machine} \\
+\midrule
+Desktop A (Windows; C\# clients; brokers) & Dinu Plesu: HP OMEN 16-wd0xxx, Windows 11 IoT Enterprise LTSC 10.0.26300; Intel Core i5-13420H, 8 cores / 12 threads, 2.1\,GHz; 16\,GB DDR5-5600; Samsung 990 PRO 2\,TB NVMe; Wi-Fi 6E, 192.168.1.41 \\
+Desktop B (Linux; Go clients) & Igor Boltunov: CachyOS, kernel 7.3.6-1-cachyos, x86-64; Intel Core i5-10300H, 4 cores / 8 threads; 7.6\,GiB RAM; Micron 2210 512\,GB NVMe; Wi-Fi 6, 192.168.1.22 \\
+HTTP broker & Go, port 8080, on desktop A \\
+gRPC broker & C\#, port 5000, on desktop A \\
+Runtimes &.NET 10.0.404; Go 1.27.4; Rust 1.99.1 \\
+\bottomrule
+\end{tabularx}
+\caption{Test environment for the two-desktop run.}
+\label{tab:env}
+\end{table}
+
+\subsection{Results}
+Table~\ref{tab:results} collects the results of both parts. Every value comes from
+the transcripts and logs listed in Section~\ref{app:evidence}.
+
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}l X X@{}}
 \toprule
-Aspect & HTTP (Part 1) & gRPC (Part 2) \\
+\textbf{Check} & \textbf{Part 1: HTTP} & \textbf{Part 2: gRPC} \\
 \midrule
-Contract & hand-written paths, methods, status codes and JSON fields & \texttt{broker.proto}, generated stubs \\
-Transport & HTTP/1.1, JSON & HTTP/2, binary Protocol Buffers \\
+Messages per topic & 5 from each publisher & 5 from each publisher \\
+Ids delivered & 1--10, unique, in order & 1--10, unique, in order \\
+Subscribers receiving all messages & 2 of 2 & 2 of 2 \\
+No token & 401, \texttt{WWW-Authenticate} & \texttt{Unauthenticated} \\
+Forbidden topic & 403 & \texttt{PermissionDenied} \\
+Allowed topic & 202, id 11, sender \texttt{phone} & OK, id 11 \\
+After restart & next id 12; 12 messages on disk & next id 12; 12 messages on disk \\
+\bottomrule
+\end{tabularx}
+\caption{Results of the two-desktop run for RQ1--RQ3.}
+\label{tab:results}
+\end{table}
+
+\subsection{Comparison of the two contracts (RQ4)}
+Both parts produced the same message ids, the same delivery order and the same
+authentication outcomes. They differ in how the contract is written down and how
+the messages travel.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+\textbf{Aspect} & \textbf{HTTP (Part 1)} & \textbf{gRPC (Part 2)} \\
+\midrule
+Contract & paths, methods, status codes and JSON fields, agreed by hand & \texttt{broker.proto}, generated stubs \\
+Transport and encoding & HTTP/1.1, JSON text & HTTP/2, binary Protocol Buffers \\
 Publish & \texttt{POST}, 202 Accepted & unary \texttt{Publish} \\
 Subscribe & \texttt{GET}, open response, NDJSON & server-streaming \texttt{Subscribe} \\
-Auth error & 401 / 403 & Unauthenticated / PermissionDenied \\
-Topics & \texttt{GET /topics} & unary \texttt{ListTopics} \\
-Persistence & temp file + rename & same \\
+Auth errors & 401 / 403 & \texttt{Unauthenticated} / \texttt{PermissionDenied} \\
+Topic list & \texttt{GET /topics} & unary \texttt{ListTopics} \\
+Persistence & temporary file and rename & the same \\
+Easy to inspect by hand & yes: \texttt{curl}, browser, logs & needs a gRPC client \\
 \bottomrule
 \end{tabularx}
 \caption{The two parts implement the same broker with different contracts.}
+\label{tab:comparison}
 \end{table}
 
-\subsection{Figures}
+The HTTP contract is easy to test with ordinary tools and makes the streaming
+visible in the protocol. The gRPC contract is stricter: a change to a field
+breaks the generated code at compile time rather than at run time, and streaming
+is a first-class call. For this small broker both are adequate. The choice in a
+real system would depend on the tools and clients around it.
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.92\linewidth]{figures/lab4-http-broker.png}
-\caption{The HTTP broker: requests, topics and deliveries.}
-\end{figure}
+\subsection{Changes after the two-device run}\label{sec:changes}
+After the two-device run the code was reviewed against the laboratory sheet. Four
+faults were found and fixed in both Go brokers. The C\# brokers were changed in the
+same way, but they could not be compiled or run on the machine used for these
+checks, so their changes have only been checked by reading them.
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.92\linewidth]{figures/lab4-http-subscriber.png}
-\caption{An HTTP subscriber receiving the stream.}
-\end{figure}
+\begin{itemize}
+  \item \textbf{Lost or reordered messages under concurrency.} The Go brokers wrote
+  the file outside the topic lock, so a stale write could replace a newer one, and
+  two writers could delete the file. They also queued deliveries outside the lock,
+  so subscribers could receive messages out of identifier order. A publish now holds
+  a per-topic lock for its whole length.
+  \item \textbf{Silent write failures.} A failed write was logged and the publish was
+  still acknowledged. Now the message is removed again and the publish fails with
+  500 (HTTP) or \texttt{Internal} (gRPC).
+  \item \textbf{Missing tokens file.} Without a tokens file the broker accepted
+  publishes with no token. Now a token is always required, so every publish is
+  refused with 401 or \texttt{Unauthenticated}.
+  \item \textbf{Subscribers.} The HTTP stream sent no status until the first message,
+  so a subscriber could not tell it was subscribed. The stream now sends its status
+  and headers when the subscription starts, and the gRPC stream sends its response
+  headers at the same point. Delivery lines now name the subscriber.
+\end{itemize}
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.92\linewidth]{figures/lab4-http-auth.png}
-\caption{HTTP authentication: 401, 403 and 202.}
-\end{figure}
+Before the fixes, on one Linux machine, 2 of 12 HTTP bursts of 200 concurrent
+publishes left no \path{messages.json} and a third left it one message short. Two
+of six gRPC bursts left no file. Out-of-order deliveries occurred: 34 adjacent pairs out of
+204 deliveries (HTTP) and 490 out of 1{,}203 (gRPC). With no tokens file a publish was
+accepted with status 202.
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.92\linewidth]{figures/lab4-grpc-broker.png}
-\caption{The gRPC broker: unary publishes and stream subscribers.}
-\end{figure}
+After the fixes, on the same machine, the Go HTTP broker passed all 18 checks of its
+test suite, including authentication, the stream, 40 concurrent publishers, restart
+and the no-tokens case, and all 7 further checks: a failed write gave 500 with no gap
+in the identifiers, and a topic name with path characters was refused. In 12 bursts of
+200 concurrent publishes, every file was complete. The Go gRPC broker passed its suite
+with six bursts of 200 concurrent publishes, every file complete, no out-of-order
+deliveries, every message received by the subscriber, and the response headers sent
+before the first message. A restart kept all 1{,}204 messages and continued the
+identifiers, a failed write gave \texttt{Internal} with no gap, and a broker without
+a tokens file refused every publish.
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.92\linewidth]{figures/lab4-grpc-subscriber.png}
-\caption{A gRPC subscriber receiving the server stream.}
-\end{figure}
+These are single-machine results. They have not been measured across two devices.
 
-\subsection{Discussion}
-
-The results support the four research questions. Both subscribers received the
-same ten messages in identifier order in both parts, which confirms the fan-out
-and ordering rules. The identifiers were unique and consecutive because the
-assignment, append, and timestamp are one critical section. The restart test
-continued at identifier 12 with twelve persisted messages, which confirms the
-atomic-write and identifier-recovery design. The token tests produced the
-required status codes, and the authenticated publish stored the token owner as
-the sender rather than the client-supplied name.
-
-The comparison between HTTP and gRPC is a trade-off between transparency and
-typing. The HTTP API is easy to inspect with ordinary tools (`curl`, a browser,
-or a log), and the open response is a natural streaming mechanism. The gRPC API
-is more rigid but gives a generated, typed contract, binary framing, and a
-first-class server-streaming call. In this small broker both are adequate; the
-choice would depend on the surrounding system and on the tooling available to
-its operators.
-
-The design also has explicit limits. Delivery is best-effort for a connected
-subscriber: there is no acknowledgement, replay, or exactly-once guarantee, and
-a subscriber that reconnects does not receive history. The broker is a single
-node, so it is a single point of failure. Tokens are static and travel without
-TLS in the laboratory setup, which is acceptable only on a trusted network.
-These are appropriate boundaries for the task and are stated rather than hidden.
-
-\subsection{Threats to validity}
-\label{sec:threats}
-
-\textbf{Construct validity.} Correctness is inferred from broker logs,
-subscriber transcripts, and the persisted JSON file. There is no independent
-packet capture and no formal model checking. The authentication tests check
-status codes and the stored sender, not the cryptographic strength of the token
-scheme.
-
-\textbf{Internal validity.} The two publishers were started close together but
-their message bursts did not interleave perfectly; the identifier lock is the
-mechanism that guarantees uniqueness, and it is exercised by both publishers on
-the same topic. The two desktops have independent clocks, so cross-machine
-timestamps are indicative. Each scenario was run once.
-
-\textbf{External validity.} The evaluation covers one broker at a time, one LAN,
-two desktops, ten messages per part, and two implementations. It does not cover
-WAN latency, broker clustering, TLS, or high message rates. The HTTP and gRPC
-results should be read as contract-level correctness checks, not as throughput
-benchmarks.
-
-\textbf{Conclusion validity.} The sample is small and the analysis is
-descriptive. No confidence intervals, load sweeps, or failure injection were
-performed. The conclusions are limited to the correctness properties that were
-actually observed.
-
-\section{Discussion of Design Questions}
-\label{sec:design-questions}
-
-This section discusses the design choices behind the broker and answers the
-questions that arise in a technical defense.
-
-\textbf{Why 202 Accepted and not 200?} The request is accepted and queued;
-delivery to subscribers happens later in the background. 202 says ``accepted
-for processing'', not ``already delivered to everyone''.
-
-\textbf{Why a queue plus a background delivery task?} It decouples publisher
-latency from subscriber speed. A slow subscriber must not block a publish. The
-queue keeps per-topic order; one delivery task consumes messages in order and
-fans them out.
-
-\textbf{How are ids unique with two publishers at the same time?} Each topic has
-a lock; \texttt{NextId++}, append and timestamp happen inside it. Two
-publishers therefore get consecutive, unique ids. The topic map has its own
-lock because new topics can be created concurrently.
-
-\textbf{How does one publish reach several subscribers?} The delivery task
-keeps a list of open subscriber streams/channels per topic, snapshots it, and
-writes the message to each. A failed write removes that subscriber; the others
-continue.
-
-\textbf{How is a gone subscriber detected?} HTTP: a periodic heartbeat write (or
-any message write) fails, and the subscriber is removed. gRPC: the request's
-context is cancelled, the \texttt{Subscribe} handler returns and the stream is
-removed.
-
-\textbf{How does a restart lose nothing?} After every accepted message the topic
-is serialized to a temporary file and moved over \texttt{messages.json}. On
-startup the broker loads every topic file and sets
-\texttt{NextId = max(id) + 1}. A crash during the write leaves the old file
-intact because the replacement is a rename.
-
-\textbf{Why is the broker not an existing broker?} The lab requires the broker
-itself: only the standard HTTP server/client (Part 1) and gRPC (Part 2);
-RabbitMQ, Kafka, Redis, NATS and similar systems are forbidden.
-
-\textbf{What is logged?} Every request (method, path, client), every publish
-(id, topic, sender, client), every delivery (id, topic, client) and every
-subscriber add/remove, with the result.
-
-\textbf{Do subscribers get old messages after reconnect?} No. \texttt{Subscribe}
-delivers new messages as they arrive, as the lab requires. Persistence is for
-surviving a broker restart and continuing ids, not for replaying history to a
-new subscriber.
-
-\textbf{Slow subscriber.} HTTP subscribers are removed when a write fails; the
-Go implementation drops a subscriber whose buffered channel is full. Delivery
-to the remaining subscribers continues; one slow client cannot stall the
-broker.
-
-\textbf{Token errors.} HTTP uses 401 for ``no/unknown token'' and 403 for
-``valid token, topic not allowed''. gRPC uses \texttt{Unauthenticated} and
-\texttt{PermissionDenied} for the same two cases. With authentication on, the
-sender is the token owner.
-
-\textbf{HTTP versus gRPC.} HTTP/1.1 with JSON and hand-written paths/status codes
-versus a typed \texttt{.proto} contract, generated stubs, binary protobuf over
-HTTP/2 and a server-streaming call. The gRPC version has no HTTP API; the
-contract replaces the table of methods and fields.
-
+% ======================================================================
 \section{Conclusion and Future Work}
-\label{sec:conclusion}
+% ======================================================================
+Both parts implement the full laboratory: publish and deliver, restarts, and
+token-based authentication. In the two-desktop run, two publishers on two
+computers reached two subscribers, and every subscriber received every message in
+order. Identifiers stayed unique and consecutive, a restart continued at
+identifier 12 with all earlier messages on disk, and the token rules gave the
+required errors on both contracts. The gRPC part shows how a typed contract and a
+server-streaming call replace a hand-written REST API and an open HTTP response.
 
-The broker meets all three tasks in both parts. Publishers send to a topic and
-get an id and a time immediately; the background delivery task writes every
-message to every subscriber of the topic, in order. The messages and ids
-survive a restart because the broker writes each topic atomically to disk. The
-token file and the 401/403 (HTTP) and Unauthenticated/PermissionDenied (gRPC)
-answers restrict publishing to known publishers and allowed topics. The
-two-desktop run used two publishers and two subscribers in two languages on two
-computers, and both subscribers received all ten messages in order in each
-part. HTTP and gRPC implement the same architecture with different contracts;
-the gRPC part shows how a typed contract and a server-streaming call replace a
-hand-written REST API and an open HTTP response.
+Future work would add replication or partitioning to remove the single-node
+failure point; durable subscriptions and replay for late subscribers; bounded
+queues with backpressure in the C\# brokers; TLS and token rotation; and a load study with many
+publishers, subscribers and brokers. A formal model of the delivery and
+persistence rules would allow the identifier and restart invariants to be checked
+mechanically.
 
-Future work includes replication and partitioning to remove the single-node
-failure boundary; durable subscriptions and replay so that a late subscriber can
-read history; bounded queues and backpressure for slow subscribers; TLS and
-token rotation for deployment outside a trusted laboratory network; and a
-larger load study with many publishers, many subscribers, and broker clustering.
-A formal model of the delivery and persistence rules would also make it possible
-to check the identifier and restart invariants mechanically.
+The fixes made after the two-desktop run are described in Section~\ref{sec:changes}.
+They have been checked on one machine only. The two-device results above come from
+the code before the fixes and have not been measured again across devices.
 
-\section*{Data availability}
+% ======================================================================
+% ======================================================================
+% ======================================================================
+\section{Evidence files}
+\label{app:evidence}
+The transcripts, logs and persisted files of the two-desktop run are in
+\path{Lab4/evidence/two-desktop-2026-11-26/}. Part 1 files are under
+\texttt{part1-http/} and Part 2 files under \texttt{part2-grpc/}. The cross-device
+run, with a phone as the second machine, is in \path{Lab4/evidence/cross-device-2026-11-26/}.
 
-The source code, raw broker logs, publisher and subscriber transcripts, persisted
-messages, and the LaTeX source of this report are available in the NP-Labs
-repository \cite{repo}. The exact files used for the results are listed in
-Appendix~\ref{app:evidence}.
+\section{Source Code and Build Instructions}\label{sec:source}
 
-\begin{thebibliography}{99}
+The complete source code is in the NP-Labs repository, in the 4 folder:
+\begin{center}
+\large
+\url{https://github.com/Prince-of-Nothing/NP-Labs}
+\end{center}
 
-\bibitem{eugster}
-P. T. Eugster, P. A. Felber, R. Guerraoui, and A.-M. Kermarrec, ``The Many Faces
-of Publish/Subscribe,'' \emph{ACM Computing Surveys}, vol. 35, no. 2,
-pp. 114--131, 2003.
-
-\bibitem{kreps}
-J. Kreps, N. Narkhede, and J. Rao, ``Kafka: A Distributed Messaging System for
-Log Processing,'' in \emph{Proceedings of the NetDB Workshop}, 2011.
-
-\bibitem{rfc9110}
-R. Fielding, M. Nottingham, and J. Reschke, ``HTTP Semantics,'' RFC 9110,
-Internet Engineering Task Force, Jun. 2022.
-
-\bibitem{rfc9112}
-R. Fielding, M. Nottingham, and J. Reschke, ``HTTP/1.1,'' RFC 9112, Internet
-Engineering Task Force, Jun. 2022.
-
-\bibitem{rfc9113}
-M. Thomson and C. Benfield, ``HTTP/2,'' RFC 9113, Internet Engineering Task
-Force, Jun. 2022.
-
-\bibitem{grpc}
-gRPC Authors, ``gRPC: A High Performance, Open-Source Universal RPC Framework,''
-2024. [Online]. Available: \url{https://grpc.io/docs/}
-
-\bibitem{protobuf}
-Google, ``Protocol Buffers Language Guide (proto3),'' 2024. [Online].
-Available: \url{https://protobuf.dev/programming-guides/proto3/}
-
-\bibitem{kleppmann}
-M. Kleppmann, \emph{Designing Data-Intensive Applications}. Sebastopol, CA:
-O'Reilly Media, 2017.
-
-\bibitem{rfc6750}
-M. Jones and D. Hardt, ``The OAuth 2.0 Authorization Framework: Bearer Token
-Usage,'' RFC 6750, Internet Engineering Task Force, Oct. 2012.
-
-\bibitem{task}
-Laboratory Work 4: A Message Broker, Network Programming, Technical University
-of Moldova, 2026.
-
-\bibitem{repo}
-NP-Labs repository, \url{https://github.com/Prince-of-Nothing/NP-Labs},
-branch \texttt{final/labs-2-3-4-2026-11-26}.
-
-\bibitem{knowledge}
-NP-Labs, \texttt{Lab4/KNOWLEDGE.md} and \texttt{Lab4/README.md}.
-
-\bibitem{evidence}
-NP-Labs, \texttt{Lab4/evidence/two-desktop-2026-11-26/}.
-
-\end{thebibliography}
-
-\appendix
-\section{Build and run}
-
-\begin{lstlisting}[style=term,caption={Build and start the HTTP broker and clients.}]
+\begin{lstlisting}[caption={Build and start the HTTP broker and clients.}]
 cd Lab4/part1-http/go
 go build -o broker ./broker
 go build -o publisher ./publisher
@@ -855,35 +769,11 @@ dotnet run --project Lab4/part1-http/subscriber -- http://192.168.1.41:8080 grad
 dotnet run --project Lab4/part1-http/publisher -- http://192.168.1.41:8080 grades teacher tok-teacher
 \end{lstlisting}
 
-\begin{lstlisting}[style=term,caption={Build and start the gRPC broker and clients.}]
-dotnet run --project Lab4/part2-grpc/broker
-dotnet run --project Lab4/part2-grpc/subscriber -- http://192.168.1.41:5000 grades
-dotnet run --project Lab4/part2-grpc/publisher -- http://192.168.1.41:5000 grades teacher tok-teacher
-
-cd Lab4/part2-grpc/go
-go build -o subscriber ./subscriber
-go build -o publisher ./publisher
-./subscriber 192.168.1.41:5000 grades
-./publisher 192.168.1.41:5000 grades phone tok-phone
+\begin{lstlisting}[caption={Build and start the gRPC broker and clients.}]
+cd Lab4/part2-grpc
+dotnet run --project broker            # gRPC broker on port 5000
+dotnet run --project subscriber -- 192.168.1.41:5000 grades
+dotnet run --project publisher -- 192.168.1.41:5000 grades teacher tok-teacher
 \end{lstlisting}
-
-\clearpage
-\section{Evidence map}
-\label{app:evidence}
-
-\begin{table}[!ht]
-\centering
-\small
-\begin{tabularx}{\textwidth}{@{}l X@{}}
-\toprule
-Evidence & Content \\
-\midrule
-\path{Lab4/evidence/two-desktop-2026-11-26/part1-http/} & HTTP broker log, C\#/Go publisher and subscriber transcripts, auth, restart, persisted messages \\
-\path{Lab4/evidence/two-desktop-2026-11-26/part2-grpc/} & gRPC broker log, C\#/Go publisher and subscriber transcripts, auth, restart, persisted messages \\
-\texttt{Lab4/report/report.pdf} & this report \\
-\bottomrule
-\end{tabularx}
-\caption{Where to find the raw evidence for this report.}
-\end{table}
 
 \end{document}
